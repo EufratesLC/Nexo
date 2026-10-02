@@ -1,6 +1,7 @@
 // Teste de isolamento H-01 — execução completa num projecto Supabase de DESENVOLVIMENTO.
 //
-// Estado: preparado na revisão da Etapa 1; NÃO EXECUTADO (não havia projecto de desenvolvimento).
+// Estado: executado a 02/10/2026 num projecto Supabase de desenvolvimento (eu-west-1): 22/22.
+// Registo: docs/Nexo_Teste_Isolamento_H01_2026-10-02.md
 //
 // Requisitos: Node.js 22 e o pacote "pg", instalado só para este teste:
 //   npm install --no-save pg

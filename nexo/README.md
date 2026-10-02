@@ -8,9 +8,10 @@ Plataforma multiempresa de gestão comercial, financeira e de stock para pequeno
 
 | Documento | Conteúdo |
 |---|---|
-| `docs/Nexo_Especificacao_Etapa_0.md` | Especificação do MVP (versão 0.4, em validação) |
-| `docs/Nexo_Arquitectura_Etapa_1.md` | Arquitectura (versão 0.2, proposta): modelo de dados, protecção dos custos, contratos da API, operações offline, alinhamento com o roteiro, decisões pendentes |
+| `docs/Nexo_Especificacao_Etapa_0.md` | Especificação do MVP (versão 0.5, em validação; H-01 aprovada) |
+| `docs/Nexo_Arquitectura_Etapa_1.md` | Arquitectura (versão 0.4, proposta; H-01 aprovada): modelo de dados, protecção dos custos, contratos da API, operações offline, alinhamento com o roteiro, decisões pendentes |
 | `docs/Nexo_Prova_Assinatura_Etapa_1.md` | Prova técnica da autoria por assinatura (H-23, pendente): método, resultados, limitações e opções |
+| `docs/Nexo_Teste_Isolamento_H01_2026-10-02.md` | Registo do teste de isolamento H-01 no Supabase de desenvolvimento |
 | `docs/versoes/` | Versões anteriores da especificação, da arquitectura e da prova |
 
 ## Requisitos
@@ -77,7 +78,7 @@ npm test            # assinaturas (6) e custo efectivo (11), com node:test
 ```
 
 - Teste da interface: `frontend/testes/fluxo/README.md`.
-- Teste de isolamento no Supabase (H-01): `backend/testes/isolamento/README.md`. **Não executado**; exige um projecto Supabase de desenvolvimento, nunca produção.
+- Teste de isolamento no Supabase (H-01): `backend/testes/isolamento/README.md`. **Executado a 02/10/2026** num projecto de desenvolvimento: 22/22 (registo em `docs/Nexo_Teste_Isolamento_H01_2026-10-02.md`). Cobre um esquema mínimo. Nunca correr em produção.
 
 ## Estrutura
 
@@ -101,14 +102,14 @@ nexo/
     │   └── prova/            Verificação de assinaturas da prova técnica e testes
     └── testes/
         ├── custo/            Verificação numérica do custo efectivo (especificação D.3.11)
-        └── isolamento/       Teste de isolamento para o Supabase (H-01), não executado
+        └── isolamento/       Teste de isolamento para o Supabase (H-01), executado a 02/10/2026
 ```
 
 ## Próxima etapa
 
 A Etapa 2 **não foi iniciada**. O que cada decisão pendente impede está em `docs/Nexo_Arquitectura_Etapa_1.md`, secção 18.2. Em resumo:
 
-- as migrações esperam por H-01 e pelo teste de isolamento num projecto Supabase de desenvolvimento;
+- **H-01 aprovada em 02/10/2026** (teste 22/22). As migrações têm de cumprir os seus requisitos (arquitectura, 19.7), mas a Etapa 2 só começa por indicação do proprietário do projecto;
 - o projecto ainda não está em git;
 - H-23 fica pendente e bloqueia a Etapa 7 (proposta de classificação);
 - a entrevista à loja piloto continua por fazer.

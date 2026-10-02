@@ -1,6 +1,6 @@
 # Nexo — Especificação da Etapa 0 (MVP para lojas)
 
-Versão 0.4 · 30 de Setembro de 2026 · Estado: **base de trabalho em validação — Etapa 0 não concluída**
+Versão 0.5 · 2 de Outubro de 2026 · Estado: **base de trabalho em validação — Etapa 0 não concluída**
 
 Documentos de referência: `Documentos/NEXO_Plano_Plataforma_Gestao_Comercial_Financeira.docx`, `Documentos/Nexo_Etapas_de_Desenvolvimento.docx`, `Documentos/Nexo_Estrutura_Web_Mobile_API.docx`. Versões anteriores: `docs/versoes/`.
 
@@ -10,10 +10,11 @@ Documentos de referência: `Documentos/NEXO_Plano_Plataforma_Gestao_Comercial_Fi
 
 A Etapa 0 **não está concluída**:
 
-- Continuam abertas as decisões que **bloqueiam a arquitectura** (H.1).
+- Continuam abertas quatro das cinco decisões que **bloqueiam a arquitectura** (H.1). **H-01 foi aprovada** em 02/10/2026.
 - A entrevista à loja piloto ainda não foi feita.
 - As escolhas que dependem da loja continuam a ser **propostas**, não decisões aprovadas: janela offline de 72 horas (H-03), crédito (H-07), embalagens (H-10), gaveta partilhada (H-13) e a duração das pausas de contagem (H-24), entre outras.
 - A versão 0.4 resulta da revisão da Etapa 1. Corrige regras; não aprova decisões.
+- A versão 0.5 regista **só** a aprovação de H-01. As restantes propostas continuam em aberto.
 
 ## Histórico de versões
 
@@ -23,6 +24,13 @@ A Etapa 0 **não está concluída**:
 | 0.2 | Credencial do dispositivo limitada, assinatura por utilizador, quatro datas, custo no servidor, correcção das devoluções avariadas, contagem com barreira, numeração sem reutilização, papéis no caixa, permissões offline. |
 | 0.3 | Revisão focada do MVP sobre a 0.2. |
 | 0.4 | Correcções da revisão da Etapa 1 (abaixo): custo efectivo com as correcções de compra, retoma da contagem só pelo servidor, custos fora do alcance do operador, H-23 sem resolução implícita. |
+| 0.5 | Registo da decisão H-01, aprovada pelo proprietário do projecto em 02/10/2026 (abaixo). |
+
+## Alterações da versão 0.5
+
+| # | Tema | O que mudou | Onde |
+|---|---|---|---|
+| 1 | **H-01 aprovada [D]** | Decisão do proprietário do projecto, 02/10/2026, com base no teste de isolamento no Supabase de desenvolvimento (22/22; `docs/Nexo_Teste_Isolamento_H01_2026-10-02.md`). Requisitos associados registados em H.1. **Não aprova nenhuma outra proposta em aberto.** | Estado da Etapa 0, H.1, H.5 |
 
 ## Alterações da versão 0.4
 
@@ -1613,7 +1621,7 @@ Quem valida: **Loja** = entrevista à loja piloto · **Proj.** = proprietário d
 
 | # | Valida | Decisão | Proposta | Porque bloqueia a arquitectura | Consequência da proposta |
 |---|---|---|---|---|---|
-| H-01 | Proj./Téc. | Acesso da API ao Supabase e políticas de acesso | A web só fala com a API. Pedidos de utilizador correm com a identidade do utilizador; a sincronização corre com um papel próprio limitado à empresa do registo (D.12.6). A credencial de serviço não é usada nesses fluxos. | Define como todas as consultas passam o contexto de empresa e como as políticas são escritas | Dupla barreira real. Exige passar o contexto em cada transacção e testes de isolamento. |
+| H-01 | Proj./Téc. | Acesso da API ao Supabase e políticas de acesso | **[D] Aprovada pelo proprietário do projecto em 02/10/2026.** A API acede ao PostgreSQL através de **papéis próprios sem BYPASSRLS**, com **contexto local por transacção**, **RLS forçado** (ENABLE + FORCE) e **referências entre dados limitadas à mesma empresa** (chaves estrangeiras compostas). Desenho: arquitectura, secções 3 e 19 | Define como todas as consultas passam o contexto de empresa e como as políticas são escritas | **Requisitos que acompanham a decisão:** (1) repetir e ampliar os testes de isolamento nas migrações, para todas as tabelas; (2) testar a autorização da API na Etapa 3; (3) não usar a credencial de serviço nos pedidos; (4) preservar a protecção contra contexto residual (marca da transacção); (5) incluir a correcção da transferência de propriedade da função (`GRANT CREATE` temporário antes de `ALTER FUNCTION … OWNER`, seguido de `REVOKE CREATE`). |
 | H-02 | Loja/Proj. | Identidade dos operadores (e-mail, telefone ou conta criada pelo gestor) | Cada operador tem conta própria no serviço de autenticação (e-mail ou telefone); PIN no balcão. | Muda o modelo de utilizador, a autenticação online, a autoria (D.12) e a auditoria | Autoria pessoal. Se os operadores não tiverem e-mail nem telefone próprio, é preciso SMS (custo) ou contas locais geridas pelo gestor, que exigem outro fluxo de autenticação. |
 | H-04 | Proj. | Método de custo | Custo médio ponderado por produto e filial. | Define o modelo de valor do stock, os movimentos e os acertos | Simples. Não serve para lotes (farmácias). Mudar depois obriga a recalcular o histórico. |
 | H-21 | Proj. | Ordem de custeio e acertos | Ordem de aplicação no servidor; custo registado nunca reescrito; acertos explícitos, imputados ou de correcção (D.3). | Define se os custos são imutáveis ou recalculáveis, e o que se guarda por movimento | Determinístico e auditável, com as aproximações A1–A7 assumidas. A alternativa (recalcular pela ordem física) depende dos relógios e reescreve custos. |
@@ -1671,7 +1679,7 @@ O roteiro pede "nenhuma decisão crítica em aberto para a primeira loja". Esta 
 
 **Estado actual:**
 
-- 5 decisões de arquitectura em aberto;
+- **(0.5)** H-01 aprovada em 02/10/2026; 4 decisões de arquitectura em aberto (H-02, H-04, H-21, H-23);
 - entrevista à loja por fazer;
 - H-03, H-07, H-10, H-13 e H-24 continuam **propostas por validar com a loja**.
 

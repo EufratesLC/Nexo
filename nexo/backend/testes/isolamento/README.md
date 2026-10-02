@@ -1,6 +1,8 @@
 # Teste de isolamento no Supabase (H-01)
 
-**Estado: NÃO EXECUTADO no Supabase.** Preparado na revisão da Etapa 1 (30/09/2026), quando não existia um projecto Supabase de desenvolvimento. Os ficheiros SQL foram executados localmente em PGlite (PostgreSQL 18.3 em WebAssembly): 20/20. Isto verifica a sintaxe e a lógica, mas **não substitui** este teste (ver "Limitações").
+**Estado: EXECUTADO no Supabase de desenvolvimento a 02/10/2026** pelo proprietário do projecto (região eu-west-1): **22/22 OK**, zero fugas; esquema e papéis de teste removidos no fim. PostgreSQL 17.11. Registo: `docs/Nexo_Teste_Isolamento_H01_2026-10-02.md`. Antes disso, verificação local em PGlite: 20/20.
+
+**Cobre um esquema mínimo**, não todas as tabelas futuras nem a autorização da API.
 
 Estes ficheiros **não são as migrações definitivas**. Usam um esquema separado (`nexo_iso`) e papéis de teste (`nexo_iso_*`) que se apagam no fim. O desenho que testam está em `docs/Nexo_Arquitectura_Etapa_1.md`, secções 3, 3.7 e 19.
 
@@ -30,8 +32,8 @@ No painel do projecto de desenvolvimento, em *Connect*:
 
 | Variável | Ligação | Utilizador |
 |---|---|---|
-| `NEXO_ISO_ADMIN_URL` | Directa (porta 5432) | `postgres` |
-| `NEXO_ISO_API_URL` | Directa (porta 5432) | `nexo_iso_api` |
+| `NEXO_ISO_ADMIN_URL` | Directa ou **Session pooler** (porta 5432) | `postgres` |
+| `NEXO_ISO_API_URL` | Directa ou **Session pooler** (porta 5432) | `nexo_iso_api` (no pooler: `nexo_iso_api.<referência-do-projecto>`) |
 | `NEXO_ISO_POOL_URL` | Pooler em **modo transacção** (porta 6543) | `nexo_iso_api.<referência-do-projecto>` |
 | `NEXO_ISO_SENHA_API` | — | Palavra-passe que o script atribui a `nexo_iso_api`. Escolha uma nova, só para este teste |
 | `NEXO_ISO_CONFIRMO_DESENVOLVIMENTO` | — | `sim` |
@@ -68,9 +70,13 @@ psql $env:NEXO_ISO_ADMIN_URL -f testes/isolamento/00_limpar.sql
 
 Registe o resultado (data, região, versão do PostgreSQL do projecto, saída completa) em `docs/Nexo_Arquitectura_Etapa_1.md`, secção 19, e mude o estado para executado.
 
+Na execução de 02/10/2026 usou-se o Session pooler (5432) para a preparação e T01–T20, e o Transaction pooler (6543) para P01 e P02.
+
+**Correcção de 02/10/2026:** `01_preparar.sql` dá `CREATE` no esquema a `nexo_iso_autenticacao` só durante o `ALTER FUNCTION … OWNER`, e retira-o a seguir. Sem isso, a mudança de dono falha num utilizador que não seja superutilizador.
+
 ## Limitações
 
 - Esquema **mínimo**: prova o mecanismo (papéis, contexto, políticas, chaves compostas, função de autenticação), não cada tabela do modelo. As migrações definitivas terão de repetir estes testes para todas as tabelas.
 - O dono das tabelas de teste é o administrador que corre o script, para simplificar a limpeza. No desenho, o dono é um papel próprio de migrações. Os testes nunca correm como dono.
 - Não testa a API: as verificações de função dentro da mesma empresa e os esquemas de resposta são testes da API (C-API-1 a 7, propostos).
-- No PGlite (verificação local) não havia pooler, papéis do Supabase, nem utilizador `postgres` sem superutilizador. Por isso P01 e P02 nunca foram executados.
+- No PGlite (verificação local) não havia pooler, papéis do Supabase, nem utilizador `postgres` sem superutilizador. Por isso P01 e P02 não correram aí, e a falta de `CREATE` para o novo dono só apareceu no Supabase.

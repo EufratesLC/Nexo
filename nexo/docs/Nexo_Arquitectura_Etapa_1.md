@@ -1,12 +1,31 @@
 # Nexo — Arquitectura da Etapa 1
 
-Versão 0.2 · 30 de Setembro de 2026 · Estado: **proposta para validação — não aprovada**
+Versão 0.4 · 2 de Outubro de 2026 · Estado: **proposta para validação — não aprovada no seu conjunto.** Só **H-01** está aprovada (02/10/2026, secções 3 e 19.7)
 
-Base: `docs/Nexo_Especificacao_Etapa_0.md`, versão 0.4. A especificação continua em validação: **nenhuma sugestão ou decisão em aberto é tratada aqui como aprovada**. Onde este documento escolhe uma opção, marca-a como **proposta** e indica a decisão de que depende (H-xx).
+Base: `docs/Nexo_Especificacao_Etapa_0.md`, versão 0.5. A especificação continua em validação: **nenhuma sugestão ou decisão em aberto é tratada aqui como aprovada**. Onde este documento escolhe uma opção, marca-a como **proposta** e indica a decisão de que depende (H-xx).
 
-Este documento propõe o modelo de dados e os contratos. **Não foram criadas migrações definitivas** nem executada nenhuma migração numa base real. O teste de isolamento da secção 19 está preparado, mas **não foi executado no Supabase**.
+Este documento propõe o modelo de dados e os contratos. **Não foram criadas migrações definitivas** nem executada nenhuma migração numa base real. O teste de isolamento da secção 19 foi **executado num projecto Supabase de desenvolvimento** a 02/10/2026 (22/22). Cobre um esquema mínimo, não o modelo completo nem a API.
 
-Versão anterior: `docs/versoes/Nexo_Arquitectura_Etapa_1_v0.1.md`.
+Versões anteriores: `docs/versoes/Nexo_Arquitectura_Etapa_1_v0.1.md`, `docs/versoes/Nexo_Arquitectura_Etapa_1_v0.2.md`, `docs/versoes/Nexo_Arquitectura_Etapa_1_v0.3.md`.
+
+---
+
+## Alterações da versão 0.4 (decisão H-01)
+
+| # | O que mudou | Onde |
+|---|---|---|
+| 1 | **H-01 aprovada** pelo proprietário do projecto em 02/10/2026, com cinco requisitos. Nenhuma outra proposta é aprovada por esta decisão | 1, 3.1, 3.5, 14, 18.2, **19.7** |
+
+---
+
+## Alterações da versão 0.3 (resultado do teste H-01)
+
+| # | O que mudou | Onde |
+|---|---|---|
+| 1 | Resultado do teste de isolamento no Supabase de desenvolvimento: 22/22, zero fugas, esquema e papéis de teste removidos | 0, 14, 16, 18.2, **19** |
+| 2 | Correcção em `01_preparar.sql`: `GRANT CREATE` temporário ao dono da função antes de `ALTER FUNCTION … OWNER`, seguido de `REVOKE CREATE`. Levar para a migração definitiva | 3.4, 19.3 |
+| 3 | Modo de ligação usado: Session pooler (5432) para preparação e T01–T20; Transaction pooler (6543) para P01–P02 | 19.2 |
+| 4 | Recomendação para fechar H-01, **para decisão do proprietário do projecto** | 19.5 |
 
 ---
 
@@ -23,7 +42,7 @@ Versão anterior: `docs/versoes/Nexo_Arquitectura_Etapa_1_v0.1.md`.
 | 7 | Contagem cega | Verificada no protótipo e corrigida (ver 0) | 0, 15 |
 | 8 | H-23 | Continua pendente. O que pode avançar e o que depende da decisão | **18** (nova) |
 | 9 | Autenticação do registo | Explicado como `nexo.autenticar_registo` lê o registo antes do contexto, com FORCE activo e sem acesso genérico | 3.4 |
-| 10 | Teste de isolamento (H-01) | Preparado em `backend/testes/isolamento/`. **Não executado no Supabase**; verificado localmente em PGlite | **19** (nova) |
+| 10 | Teste de isolamento (H-01) | Preparado em `backend/testes/isolamento/`; verificado localmente em PGlite. (Executado no Supabase na 0.3) | **19** (nova) |
 
 ---
 
@@ -36,7 +55,7 @@ Versão anterior: `docs/versoes/Nexo_Arquitectura_Etapa_1_v0.1.md`.
 | Prova técnica de autoria por assinatura (H-23) | `frontend/prova-assinatura.html`, `backend/src/prova/` | Executada em Edge e Chrome no Windows; resultados em `docs/Nexo_Prova_Assinatura_Etapa_1.md`; **H-23 pendente** |
 | Teste da interface (32 passos) | `frontend/testes/fluxo/` | Executado neste computador (secção 16) |
 | Verificação numérica do custo efectivo | `backend/testes/custo/` | Executada (`npm test`) |
-| Teste de isolamento no Supabase (H-01) | `backend/testes/isolamento/` | **NÃO EXECUTADO** no Supabase (secção 19) |
+| Teste de isolamento no Supabase (H-01) | `backend/testes/isolamento/` | **Executado** a 02/10/2026 pelo proprietário do projecto, num projecto de desenvolvimento: 22/22 (secção 19) |
 
 **Correcções ao protótipo nesta revisão:**
 
@@ -84,7 +103,7 @@ flowchart LR
 
 Princípios que orientam as escolhas:
 
-1. A web e a app mobile **só falam com a API**. O Supabase é usado directamente apenas para autenticação (proposta H-01, especificação D.15.4).
+1. A web e a app mobile **só falam com a API**. O Supabase é usado directamente apenas para autenticação (H-01, aprovada em 02/10/2026; especificação D.15.4).
 2. Há **dois caminhos de escrita**:
    - **Gestão** (produtos, compras, contagens, utilizadores, relatórios): pedidos REST online, com o JWT do utilizador.
    - **Balcão** (vendas, pagamentos, cancelamentos, movimentos de caixa): **operações** no formato da secção 7, aplicadas no servidor por uma única função de aplicação. Proposta: na Etapa 6 as operações chegam online com o JWT; na Etapa 7 passam também a chegar pelo canal do dispositivo (secção 17, proposta P-1).
@@ -135,7 +154,9 @@ sequenceDiagram
 
 ## 3. Isolamento por empresa e políticas de acesso
 
-### 3.1 Papéis na base de dados (proposta, H-01)
+### 3.1 Papéis na base de dados (H-01, aprovada em 02/10/2026)
+
+A decisão aprova o princípio: papéis próprios sem BYPASSRLS, contexto local por transacção, RLS forçado e referências limitadas à mesma empresa (19.7). A lista concreta de papéis abaixo é o desenho testado; pode ganhar papéis nas migrações, sempre com os mesmos princípios.
 
 | Papel | Tem login? | Ignora as políticas? | Uso |
 |---|---|---|---|
@@ -224,7 +245,9 @@ CREATE FUNCTION nexo.autenticar_registo(p_hash bytea)
       FROM nexo.registos_dispositivo r
      WHERE r.credencial_hash = p_hash AND octet_length(p_hash) = 32
 $$;
+GRANT CREATE ON SCHEMA nexo TO nexo_autenticacao;      -- exigido por ALTER … OWNER (0.3)
 ALTER FUNCTION nexo.autenticar_registo(bytea) OWNER TO nexo_autenticacao;
+REVOKE CREATE ON SCHEMA nexo FROM nexo_autenticacao;   -- retirado logo a seguir
 REVOKE ALL ON FUNCTION nexo.autenticar_registo(bytea) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION nexo.autenticar_registo(bytea) TO nexo_api;
 ```
@@ -254,7 +277,7 @@ O segredo tem pelo menos 256 bits aleatórios e só o seu resumo SHA-256 é guar
 | Escritas da sincronização fora do registo da credencial | Uso da credencial de serviço, que por isso fica fora dos caminhos de pedido |
 | Leitura de custos pelo operador, por privilégio (3.7) | Custos guardados no dispositivo (3.7.6) |
 
-**Alternativa considerada para H-01:** chamar a base pelo PostgREST com o JWT do utilizador, de modo que as políticas usem `auth.uid()` verificado pela própria base. Isto é mais forte nas leituras online, porque a API não consegue forjar o contexto sem o segredo do JWT. Mas as escritas atómicas em várias tabelas exigiriam funções RPC, e a sincronização não tem JWT de utilizador. **Proposta:** ligação directa com papéis e contexto por transacção nos dois caminhos, e testes automáticos de isolamento em cada módulo. **Decisão pendente: H-01.**
+**Alternativa considerada para H-01:** chamar a base pelo PostgREST com o JWT do utilizador, de modo que as políticas usem `auth.uid()` verificado pela própria base. Isto é mais forte nas leituras online, porque a API não consegue forjar o contexto sem o segredo do JWT. Mas as escritas atómicas em várias tabelas exigiriam funções RPC, e a sincronização não tem JWT de utilizador. **Proposta:** ligação directa com papéis e contexto por transacção nos dois caminhos, e testes automáticos de isolamento em cada módulo. **H-01 aprovada em 02/10/2026 com esta opção**; o PostgREST com RPC fica registado como considerado e não adoptado.
 
 ### 3.6 Preparação para filiais
 
@@ -964,7 +987,7 @@ Os pedidos com `Idempotency-Key` guardam em `pedidos_idempotentes` (chave, resum
 
 | # | Decisão | Proposta | Estado depois da revisão |
 |---|---|---|---|
-| H-01 | Acesso da API à base e políticas | Papéis `nexo_operador`, `nexo_gestao` e `nexo_sincronizacao`, contexto por transacção com marca, sem credencial de serviço nos pedidos | Teste de isolamento **preparado**, verificado localmente em PGlite, **não executado no Supabase** (secção 19). Bloqueia as migrações da Etapa 2 |
+| H-01 | Acesso da API à base e políticas | Papéis `nexo_operador`, `nexo_gestao` e `nexo_sincronizacao`, contexto por transacção com marca, sem credencial de serviço nos pedidos | **Aprovada** pelo proprietário do projecto em 02/10/2026, com os requisitos de 19.7. Teste no Supabase de desenvolvimento: 22/22, zero fugas |
 | H-02 | Identidade dos operadores | Conta própria no Supabase Auth | Depende da entrevista. Bloqueia a Etapa 3 |
 | H-04 / H-21 | Custo médio e ordem de aplicação | Como na especificação | Modelo de tabelas revisto (4.3). Bloqueia a Etapa 4 |
 | H-23 | Autoria por assinatura | **Sem recomendação automática** | **Pendente.** Proposta de classificação: bloqueia a Etapa 7, não a Etapa 2 (secção 18) |
@@ -1024,8 +1047,8 @@ Ver `README.md`, secção "Verificar". Testes desta revisão:
 | Tipos do backend | `npm run typecheck` (backend) | Executado |
 | Assinaturas (6) e custo efectivo (11) | `npm test` (backend) | Executado: 17/17 |
 | Fluxo da interface (32 passos) | `npm run teste:fluxo` (frontend, com `npm run dev` a correr) | Executado: 32/32, em Edge 154 sem interface, neste computador. Instruções em `frontend/testes/fluxo/README.md` |
-| Isolamento na base (T01–T20) | `backend/testes/isolamento/` | **Não executado no Supabase.** Executado localmente em PGlite (PostgreSQL 18.3 em WebAssembly): 20/20 |
-| Isolamento no pool (P01–P02) | `backend/testes/isolamento/executar.mjs` | **Não executado** (exige o pooler do Supabase) |
+| Isolamento na base (T01–T20) | `backend/testes/isolamento/` | **Executado no Supabase de desenvolvimento** a 02/10/2026 pelo proprietário do projecto (Session pooler, 5432): 20/20. Antes, localmente em PGlite: 20/20 |
+| Isolamento no pool (P01–P02) | `backend/testes/isolamento/executar.mjs` | **Executado** a 02/10/2026 (Transaction pooler, 6543): 2/2, zero fugas |
 | Testes da API sobre custos (C-API-1 a 7) | — | **Propostos**; não há API |
 
 ---
@@ -1091,7 +1114,7 @@ Nenhuma destas propostas foi aplicada. Nenhuma funcionalidade de etapas seguinte
 | Frontend base (rotas, estado, formulários, estrutura) | Sim | Escolha de bibliotecas; não depende de H-xx |
 | Backend base (erros, registo de eventos, configuração) | Sim | — |
 | Qualidade de código (lint, tipos, testes, CI) | Sim | — |
-| Migrações: ferramenta e primeira migração (esquema `nexo`, papéis, `definir_contexto`, `autenticar_registo`) | **Não** | **H-01**, e o teste de isolamento executado num projecto Supabase de desenvolvimento (secção 19, **não executado**) |
+| Migrações: ferramenta e primeira migração (esquema `nexo`, papéis, `definir_contexto`, `autenticar_registo`) | Sim, quanto a H-01 (aprovada) | Têm de cumprir os requisitos de 19.7. A Etapa 2 continua **por iniciar** até indicação do proprietário do projecto |
 | Migrações das tabelas de negócio | Não são da Etapa 2 | Entram por módulo: H-02 antes da 3; H-04/H-21 antes da 4; H-29 antes da 5 e 6; H-23 e H-28 antes da 7 |
 | Variáveis de ambiente de exemplo | Sim, sem segredos | — |
 | Ambientes de desenvolvimento | Parcial | Falta um projecto Supabase de desenvolvimento; e HTTPS local para testar telemóveis (a prova mostrou que é preciso) |
@@ -1110,45 +1133,118 @@ Nenhuma destas propostas foi aplicada. Nenhuma funcionalidade de etapas seguinte
 
 ---
 
-## 19. Teste de isolamento no Supabase (H-01) — **NÃO EXECUTADO**
+## 19. Teste de isolamento no Supabase (H-01) — **executado a 02/10/2026**
 
-**Estado:** preparado. **Não foi executado no Supabase**, porque não há um projecto de desenvolvimento configurado. Não se usou produção e não há segredos nos ficheiros.
+### 19.1 Resultado
 
-Ficheiros em `backend/testes/isolamento/` (separados das migrações definitivas; esquema de teste `nexo_iso`, papéis `nexo_iso_*`):
+| Item | Valor |
+|---|---|
+| Data | 02/10/2026 |
+| Quem executou | Proprietário do projecto |
+| Ambiente | Projecto Supabase **de desenvolvimento** (não produção) |
+| Região | eu-west-1 |
+| Versão do PostgreSQL | PostgreSQL 17.11 (confirmada no SQL Editor do projecto nexo-dev) |
+| Resultado | **22/22 verificações OK**: T01–T20, P01 e P02. **Zero fugas** |
+| Limpeza | Esquema `nexo_iso` e papéis `nexo_iso_*` removidos depois do teste |
+| Saída completa | `docs/Nexo_Teste_Isolamento_H01_2026-10-02.md` (inserida; os 22 resultados conferidos) |
+
+O teste foi executado pelo proprietário do projecto; a saída completa que forneceu está no ficheiro indicado. Em P02, 200 das 300 transacções sem contexto **herdaram** o valor residual de sessão, o que confirma que o Transaction pooler passa estado entre clientes. A marca da transacção anulou-o em todas (zero fugas).
+
+### 19.2 Ligações usadas
+
+| Fase | Ligação | Porta | Utilizador |
+|---|---|---|---|
+| Preparação (`00`–`02`) | Session pooler | 5432 | administrador do projecto |
+| Testes T01–T20 (`03_testes.sql`) | Session pooler | 5432 | `nexo_iso_api` |
+| Testes P01 e P02 (concorrência e contexto residual) | **Transaction pooler** | 6543 | `nexo_iso_api` |
+
+O README previa a ligação directa para as duas primeiras fases. O Session pooler mantém uma ligação de servidor por cliente durante a sessão, por isso serve os mesmos testes. O modo de transacção, onde as fugas de contexto podem acontecer, foi o usado em P01 e P02.
+
+### 19.3 Correcção feita durante a execução
+
+Para executar o script no Supabase, o proprietário do projecto teve de dar ao papel `nexo_iso_autenticacao` o privilégio `CREATE` no esquema antes do `ALTER FUNCTION … OWNER TO nexo_iso_autenticacao`. É coerente com a regra do PostgreSQL: para um utilizador que não é superutilizador mudar o dono de um objecto, o novo dono tem de ter `CREATE` no esquema do objecto. A verificação local em PGlite não detectou o problema, porque aí o administrador é superutilizador.
+
+Correcção em `backend/testes/isolamento/01_preparar.sql`:
+
+```sql
+GRANT CREATE ON SCHEMA nexo_iso TO nexo_iso_autenticacao;
+ALTER FUNCTION nexo_iso.autenticar_registo(bytea) OWNER TO nexo_iso_autenticacao;
+REVOKE CREATE ON SCHEMA nexo_iso FROM nexo_iso_autenticacao;
+```
+
+O privilégio dura só durante a mudança de dono: depois do `REVOKE`, o papel volta a ter apenas `USAGE` no esquema e `SELECT` nas colunas de `registos_dispositivo`. A mesma sequência entra na migração definitiva (secção 3.4).
+
+### 19.4 O que o teste cobre e o que não cobre
+
+| Cobre (no Supabase de desenvolvimento) | **Não cobre** |
+|---|---|
+| Papéis de execução sem BYPASSRLS; login NOINHERIT; ENABLE + FORCE (T01–T03) | **As tabelas futuras.** O esquema é **mínimo** (9 tabelas de teste). Cada migração definitiva tem de repetir estes testes para todas as tabelas |
+| Pedidos sem contexto e contexto sem marca negados (T04, T05) | **A autorização da API**: funções dentro da mesma empresa, limites, filiais, esquemas de resposta (C-API-1 a 7, propostos) |
+| Leitura, escrita e mudança de empresa recusadas; chaves compostas (T06–T09) | A verificação do JWT e da credencial pela API, e o *middleware* que define o contexto |
+| Operador sem acesso a custos por privilégio, por colunas e por valores-sentinela (T10–T14) | Os papéis `service_role` e `postgres` em uso pela aplicação (por desenho, não usados) |
+| Sincronização limitada à empresa e ao registo; sem acesso administrativo (T15, T16) | Desempenho das políticas com volumes reais |
+| `autenticar_registo` sem contexto e sem acesso genérico (T17, T18) | Filtro por filial (preparado, não testado) |
+| Contexto não passa entre transacções, na mesma ligação (T19, T20) e no Transaction pooler com concorrência e valor residual de sessão (P01, P02) | Outra região, outra versão do PostgreSQL ou mudanças futuras do pooler |
+
+### 19.5 Recomendação para fechar H-01 (aceite em 02/10/2026, ver 19.7)
+
+**Recomendo fechar H-01 adoptando a proposta testada**:
+
+- a API liga-se com um papel de login próprio (`nexo_api`, NOINHERIT, NOBYPASSRLS);
+- cada transacção faz `SET LOCAL ROLE` para `nexo_operador`, `nexo_gestao` ou `nexo_sincronizacao`;
+- o contexto vai em `set_config(…, true)`, com a marca da transacção;
+- todas as tabelas têm políticas com ENABLE + FORCE e chaves estrangeiras compostas;
+- os custos ficam em tabelas sem privilégio para o operador;
+- a credencial de serviço fica fora dos caminhos de pedido.
+
+**Porquê:** o teste mostrou, no Supabase e no modo de pooler que a API vai usar, as propriedades de que o desenho depende: isolamento entre empresas, negação sem contexto, nenhuma fuga no pool (incluindo com estado de sessão residual) e custos fora do alcance do operador. A alternativa PostgREST + RPC (3.5) não traz vantagem que compense a falta de transacções em várias tabelas e a falta de JWT na sincronização.
+
+**Condições propostas para o fecho** (a registar com a decisão):
+
+1. ~~Registar a saída completa e a versão do PostgreSQL~~ (feito: PostgreSQL 17.11). Uma mudança de versão maior do PostgreSQL no projecto obriga a repetir o teste, porque as regras de papéis mudam entre versões (por exemplo, o privilégio exigido por `ALTER … OWNER`).
+2. **A API usa o Transaction pooler (6543)** e só `SET LOCAL` / `set_config(…, true)`. Um teste automático falha se o código chamar `set_config(…, false)` ou `SET` de sessão.
+3. **Os testes T01–T20 passam a fazer parte das migrações**, generalizados a todas as tabelas: verificação pelo catálogo de ENABLE + FORCE, de colunas de custo legíveis pelo operador e de chaves estrangeiras sem `empresa_id`. A Etapa 2 cria esta verificação; cada etapa seguinte acrescenta as suas tabelas.
+4. **A correcção de 19.3** (`GRANT CREATE` temporário) entra na primeira migração.
+5. **A autorização da API continua por provar**: os testes C-API (3.7.5) e os de G.1.2 e G.1.4 ficam como critérios da Etapa 3.
+
+**O que fechar H-01 não faz:**
+
+- **não aprova a arquitectura**, que continua proposta;
+- **não inicia a Etapa 2**, que também depende de criar o repositório remoto e de a entrevista à loja não alterar o modelo de identidade (H-02);
+- **não fecha** H-02, H-04/H-21 nem H-23.
+
+A decisão era do proprietário do projecto e está registada em 19.7.
+
+### 19.6 Ficheiros
+
+Em `backend/testes/isolamento/`, separados das migrações definitivas (esquema de teste `nexo_iso`, papéis `nexo_iso_*`):
 
 | Ficheiro | Conteúdo |
 |---|---|
 | `00_limpar.sql` | Apaga o esquema e os papéis de teste |
-| `01_preparar.sql` | Papéis sem BYPASSRLS, contexto com marca, tabelas mínimas com chaves compostas, ENABLE + FORCE, privilégios e políticas, `autenticar_registo` |
+| `01_preparar.sql` | Papéis sem BYPASSRLS, contexto com marca, tabelas mínimas com chaves compostas, ENABLE + FORCE, privilégios e políticas, `autenticar_registo` (com a correcção de 19.3) |
 | `02_dados.sql` | Duas empresas fictícias com custos-sentinela |
 | `03_testes.sql` | T01–T20, a correr ligado como `nexo_iso_api` |
 | `executar.mjs` | Execução completa (preparar, testar, pool P01–P02, limpar), a partir de variáveis de ambiente |
 | `README.md` | Requisitos, passos, resultados esperados, limitações |
 
-**Cobertura pedida:**
+**Verificação local anterior** (30/09/2026, PGlite 0.5.8 / PostgreSQL 18.3, superutilizador): 20/20, e falhas nos testes certos com três fragilidades introduzidas de propósito. Não detectou a falta de `CREATE` (19.3) nem testou o pooler.
 
-| Pedido | Testes |
-|---|---|
-| Duas empresas com dados distintos | `02_dados.sql` |
-| Leituras e escritas entre empresas recusadas | T06, T07 |
-| Chaves estrangeiras entre empresas recusadas | T08 (e controlo T09) |
-| Pedidos sem contexto | T04, T05 |
-| Sem fuga de contexto entre transacções no pool | T19, T20 (mesma ligação); P01, P02 (pooler em modo transacção, concorrência) |
-| Papéis de execução sem BYPASSRLS | T01, T02, T03 |
-| Operador sem acesso a custos | T10–T14 |
-| Sincronização limitada à empresa e ao registo da credencial | T15, T16 |
-| `autenticar_registo` antes do contexto, sem acesso genérico | T17, T18 |
+### 19.7 Decisão H-01 — **aprovada pelo proprietário do projecto em 02/10/2026**
 
-**Verificação local (não substitui o teste no Supabase):**
+**Decisão:** a API acede ao PostgreSQL através de **papéis próprios sem BYPASSRLS**, com **contexto local por transacção**, **RLS forçado** e **referências entre dados limitadas à mesma empresa**.
 
-- Os ficheiros `00` a `03` foram executados em **PGlite 0.5.8** (PostgreSQL 18.3 em WebAssembly), numa pasta temporária fora do projecto: **20/20 OK**.
-- Uma segunda execução com três fragilidades introduzidas de propósito fez falhar os testes certos (T02, T05, T10, T12, T13 e T20):
-  - privilégio de custos para o operador;
-  - `FORCE` retirado;
-  - marca de contexto desligada.
-- **Não verificou:**
-  - o pooler (P01, P02);
-  - a versão e as extensões do Supabase;
-  - os papéis `anon`, `authenticated`, `service_role` e o `postgres` não-superutilizador do Supabase.
+**Requisitos que acompanham a decisão** (obrigatórios nas etapas seguintes):
 
-  No PGlite, os testes correram depois de `SET SESSION AUTHORIZATION nexo_iso_api`, porque a sessão por omissão é de superutilizador.
+| # | Requisito | Quando | Como se verifica |
+|---|---|---|---|
+| R1 | **Repetir e ampliar os testes de isolamento nas migrações**, para todas as tabelas: ENABLE + FORCE, papéis sem BYPASSRLS, chaves estrangeiras com `empresa_id`, nenhuma coluna de custo legível pelo operador, sem contexto → nada | Primeira migração (Etapa 2) e cada migração seguinte | Verificação automática pelo catálogo e testes por tabela, a correr a cada migração |
+| R2 | **Testar a autorização da API**: funções dentro da mesma empresa, empresa do cabeçalho validada pelo membro, esquemas de resposta por função (C-API-1 a 7, G.1.2, G.1.4) | Etapa 3 | Critérios de aceitação da Etapa 3 |
+| R3 | **Não usar a credencial de serviço nos pedidos** (`service_role`, `postgres`) | Sempre | A configuração da API só tem a ligação de `nexo_api`; um teste falha se o código de pedidos referir outra |
+| R4 | **Preservar a protecção contra contexto residual**: só `SET LOCAL` / `set_config(…, true)` e marca da transacção nas funções das políticas | Sempre | Testes T05, T19, T20 e P02 nas migrações; teste que falha com contexto de sessão no código |
+| R5 | **Incluir a correcção da transferência de propriedade da função**: `GRANT CREATE` temporário ao novo dono antes de `ALTER FUNCTION … OWNER`, seguido de `REVOKE CREATE` | Primeira migração | Revisão da migração e T18 |
+
+**O que esta decisão não faz:**
+
+- não aprova a arquitectura no seu conjunto nem nenhuma outra proposta em aberto (H-02, H-04/H-21, H-23, H-28, H-29, P-1, P-2…);
+- não inicia a Etapa 2.

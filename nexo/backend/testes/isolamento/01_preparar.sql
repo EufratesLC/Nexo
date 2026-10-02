@@ -272,7 +272,14 @@ CREATE FUNCTION nexo_iso.autenticar_registo(p_hash bytea)
      WHERE r.credencial_hash = p_hash
        AND octet_length(p_hash) = 32
   $$;
-ALTER FUNCTION nexo_iso.autenticar_registo(bytea) OWNER TO nexo_iso_autenticacao;
+-- Correcção de 02/10/2026 (execução no Supabase): fora de superutilizador, o novo dono de um
+-- objecto tem de ter CREATE no esquema. O privilégio é dado só durante a mudança de dono.
+GRANT CREATE ON SCHEMA nexo_iso TO nexo_iso_autenticacao;
+
+ALTER FUNCTION nexo_iso.autenticar_registo(bytea)
+  OWNER TO nexo_iso_autenticacao;
+
+REVOKE CREATE ON SCHEMA nexo_iso FROM nexo_iso_autenticacao;
 REVOKE ALL ON FUNCTION nexo_iso.autenticar_registo(bytea) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION nexo_iso.autenticar_registo(bytea) TO nexo_iso_api;
 -- O administrador deixa de pertencer ao papel depois de lhe dar a função.
