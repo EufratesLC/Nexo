@@ -1,0 +1,237 @@
+[
+    {
+        "recebidoEm":  "2026-09-30T13:32:34.299Z",
+        "fases":  [
+                      "gerar",
+                      "encerrar",
+                      "tempos"
+                  ],
+        "rotulo":  "edge-1-gerar",
+        "contexto":  "Contexto seguro: sim · crypto.subtle: disponível · Navegador: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/154.0.0.0 Safari/537.36 Edg/154.0.0.0",
+        "resultados":  [
+                           {
+                               "teste":  "Gerar par ECDSA P-256 com a chave privada não exportável",
+                               "estado":  "ok",
+                               "detalhe":  "gerado em 103.2 ms; extractable da privada = false"
+                           },
+                           {
+                               "teste":  "Tentar exportar a chave privada",
+                               "estado":  "ok",
+                               "detalhe":  "jwk: recusada (InvalidAccessError); pkcs8: recusada (InvalidAccessError)"
+                           },
+                           {
+                               "teste":  "Registar a chave pública no servidor",
+                               "estado":  "ok",
+                               "detalhe":  "chaveId k1-C01-u-ana; só a parte pública saiu do navegador"
+                           },
+                           {
+                               "teste":  "Guardar a chave no IndexedDB e recuperá-la numa nova ligação",
+                               "estado":  "ok",
+                               "detalhe":  "recuperada como CryptoKey=true, extractable=false, usos=sign"
+                           },
+                           {
+                               "teste":  "Assinar uma operação com a chave recuperada e verificar no servidor",
+                               "estado":  "ok",
+                               "detalhe":  "aceite; verificação no servidor 7.649 ms"
+                           },
+                           {
+                               "teste":  "Recusar conteúdo alterado depois de assinado",
+                               "estado":  "ok",
+                               "detalhe":  "recusada: assinatura_invalida"
+                           },
+                           {
+                               "teste":  "Recusar operação com autor diferente do dono da chave",
+                               "estado":  "ok",
+                               "detalhe":  "recusada: autor_ou_registo_diferente_da_chave"
+                           },
+                           {
+                               "teste":  "Assinar SEM desbloqueio por PIN (limite da hipótese)",
+                               "estado":  "informativo",
+                               "detalhe":  "O servidor ACEITOU uma operação assinada sem PIN: a assinatura prova o uso da chave, não o PIN nem a pessoa."
+                           },
+                           {
+                               "teste":  "Encerramento de chave: aceitar até à sequência N, recusar depois",
+                               "estado":  "ok",
+                               "detalhe":  "seq 5 antes do encerramento: aceite; seq 6 depois: chave_encerrada; seq 4 recebida depois: aceite"
+                           },
+                           {
+                               "teste":  "Tempo de assinatura (200 operações, JSON + ECDSA P-256)",
+                               "estado":  "informativo",
+                               "detalhe":  "média 0.299 ms; mediana 0.300 ms; p95 0.400 ms; máx 4.700 ms"
+                           }
+                       ]
+    },
+    {
+        "recebidoEm":  "2026-09-30T13:34:17.543Z",
+        "fases":  [
+                      "reiniciar"
+                  ],
+        "rotulo":  "edge-2-reinicio",
+        "contexto":  "Contexto seguro: sim · crypto.subtle: disponível · Navegador: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/154.0.0.0 Safari/537.36 Edg/154.0.0.0",
+        "resultados":  [
+                           {
+                               "teste":  "Encontrar a chave no IndexedDB depois de reiniciar o navegador",
+                               "estado":  "ok",
+                               "detalhe":  "chave k1-C01-u-ana criada em 2026-09-30T13:32:33.838Z; extractable=false"
+                           },
+                           {
+                               "teste":  "Assinar com a chave recuperada após reinício e verificar no servidor",
+                               "estado":  "ok",
+                               "detalhe":  "aceite"
+                           }
+                       ]
+    },
+    {
+        "recebidoEm":  "2026-09-30T13:36:08.655Z",
+        "fases":  [
+                      "reiniciar"
+                  ],
+        "rotulo":  "edge-3-copia-perfil",
+        "contexto":  "Contexto seguro: sim · crypto.subtle: disponível · Navegador: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/154.0.0.0 Safari/537.36 Edg/154.0.0.0",
+        "resultados":  [
+                           {
+                               "teste":  "Encontrar a chave no IndexedDB depois de reiniciar o navegador",
+                               "estado":  "ok",
+                               "detalhe":  "chave k1-C01-u-ana criada em 2026-09-30T13:32:33.838Z; extractable=false"
+                           },
+                           {
+                               "teste":  "Assinar com a chave recuperada após reinício e verificar no servidor",
+                               "estado":  "ok",
+                               "detalhe":  "aceite"
+                           }
+                       ]
+    },
+    {
+        "recebidoEm":  "2026-09-30T13:37:41.842Z",
+        "fases":  [
+                      "limpar",
+                      "reiniciar"
+                  ],
+        "rotulo":  "edge-4-limpar-pela-app",
+        "contexto":  "Contexto seguro: sim · crypto.subtle: disponível · Navegador: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/154.0.0.0 Safari/537.36 Edg/154.0.0.0",
+        "resultados":  [
+                           {
+                               "teste":  "Apagar a base IndexedDB da prova e confirmar que a chave desapareceu",
+                               "estado":  "ok",
+                               "detalhe":  "chave apagada: o dispositivo teria de ser preparado de novo (novo registo, D.5.3)"
+                           },
+                           {
+                               "teste":  "Encontrar a chave no IndexedDB depois de reiniciar o navegador",
+                               "estado":  "informativo",
+                               "detalhe":  "Sem chave: os dados locais não existem (limpos ou outro perfil). É preciso nova preparação."
+                           }
+                       ]
+    },
+    {
+        "recebidoEm":  "2026-09-30T13:39:15.529Z",
+        "fases":  [
+                      "reiniciar"
+                  ],
+        "rotulo":  "edge-5-perfil-vazio",
+        "contexto":  "Contexto seguro: sim · crypto.subtle: disponível · Navegador: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/154.0.0.0 Safari/537.36 Edg/154.0.0.0",
+        "resultados":  [
+                           {
+                               "teste":  "Encontrar a chave no IndexedDB depois de reiniciar o navegador",
+                               "estado":  "informativo",
+                               "detalhe":  "Sem chave: os dados locais não existem (limpos ou outro perfil). É preciso nova preparação."
+                           }
+                       ]
+    },
+    {
+        "recebidoEm":  "2026-09-30T13:41:01.905Z",
+        "fases":  [
+                      "gerar",
+                      "encerrar",
+                      "tempos"
+                  ],
+        "rotulo":  "chrome-1-gerar",
+        "contexto":  "Contexto seguro: sim · crypto.subtle: disponível · Navegador: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/122.0.0.0 Safari/537.36",
+        "resultados":  [
+                           {
+                               "teste":  "Gerar par ECDSA P-256 com a chave privada não exportável",
+                               "estado":  "ok",
+                               "detalhe":  "gerado em 71.3 ms; extractable da privada = false"
+                           },
+                           {
+                               "teste":  "Tentar exportar a chave privada",
+                               "estado":  "ok",
+                               "detalhe":  "jwk: recusada (InvalidAccessError); pkcs8: recusada (InvalidAccessError)"
+                           },
+                           {
+                               "teste":  "Registar a chave pública no servidor",
+                               "estado":  "ok",
+                               "detalhe":  "chaveId k3-C01-u-ana; só a parte pública saiu do navegador"
+                           },
+                           {
+                               "teste":  "Guardar a chave no IndexedDB e recuperá-la numa nova ligação",
+                               "estado":  "ok",
+                               "detalhe":  "recuperada como CryptoKey=true, extractable=false, usos=sign"
+                           },
+                           {
+                               "teste":  "Assinar uma operação com a chave recuperada e verificar no servidor",
+                               "estado":  "ok",
+                               "detalhe":  "aceite; verificação no servidor 0.939 ms"
+                           },
+                           {
+                               "teste":  "Recusar conteúdo alterado depois de assinado",
+                               "estado":  "ok",
+                               "detalhe":  "recusada: assinatura_invalida"
+                           },
+                           {
+                               "teste":  "Recusar operação com autor diferente do dono da chave",
+                               "estado":  "ok",
+                               "detalhe":  "recusada: autor_ou_registo_diferente_da_chave"
+                           },
+                           {
+                               "teste":  "Assinar SEM desbloqueio por PIN (limite da hipótese)",
+                               "estado":  "informativo",
+                               "detalhe":  "O servidor ACEITOU uma operação assinada sem PIN: a assinatura prova o uso da chave, não o PIN nem a pessoa."
+                           },
+                           {
+                               "teste":  "Encerramento de chave: aceitar até à sequência N, recusar depois",
+                               "estado":  "ok",
+                               "detalhe":  "seq 5 antes do encerramento: aceite; seq 6 depois: chave_encerrada; seq 4 recebida depois: aceite"
+                           },
+                           {
+                               "teste":  "Tempo de assinatura (200 operações, JSON + ECDSA P-256)",
+                               "estado":  "informativo",
+                               "detalhe":  "média 0.167 ms; mediana 0.200 ms; p95 0.300 ms; máx 0.800 ms"
+                           }
+                       ]
+    },
+    {
+        "recebidoEm":  "2026-09-30T13:42:34.841Z",
+        "fases":  [
+                      "reiniciar"
+                  ],
+        "rotulo":  "chrome-2-reinicio",
+        "contexto":  "Contexto seguro: sim · crypto.subtle: disponível · Navegador: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/122.0.0.0 Safari/537.36",
+        "resultados":  [
+                           {
+                               "teste":  "Encontrar a chave no IndexedDB depois de reiniciar o navegador",
+                               "estado":  "ok",
+                               "detalhe":  "chave k3-C01-u-ana criada em 2026-09-30T13:41:01.694Z; extractable=false"
+                           },
+                           {
+                               "teste":  "Assinar com a chave recuperada após reinício e verificar no servidor",
+                               "estado":  "ok",
+                               "detalhe":  "aceite"
+                           }
+                       ]
+    },
+    {
+        "recebidoEm":  "2026-09-30T13:44:33.546Z",
+        "fases":  [
+                      "gerar"
+                  ],
+        "rotulo":  "edge-6-ip-sem-https",
+        "contexto":  "Contexto seguro: NÃO (a Web Crypto não está disponível fora de HTTPS/localhost) · crypto.subtle: indisponível · Navegador: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/154.0.0.0 Safari/537.36 Edg/154.0.0.0",
+        "resultados":  [
+                           {
+                               "teste":  "Gerar par ECDSA P-256 com a chave privada não exportável",
+                               "estado":  "falhou",
+                               "detalhe":  "TypeError: Cannot read properties of undefined (reading \u0027generateKey\u0027)"
+                           }
+                       ]
+    }
+]

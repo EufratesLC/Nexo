@@ -1,0 +1,15 @@
+body { margin: 0; font-family: system-ui, -apple-system, "Segoe UI", sans-serif; color: #15362d; background: #f7faf8; }
+#prova { max-width: 960px; margin: 0 auto; padding: 16px; }
+.faixa { background: #2f3b37; color: #fff; padding: 8px 12px; border-radius: 8px; font-size: .85rem; }
+.explicacao { background: #fff4d6; border: 1px solid #f0d9a0; padding: 10px 12px; border-radius: 8px; }
+section { margin-top: 18px; }
+.botoes, .pin { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; align-items: center; }
+button { border: 1px solid #b9c7c1; background: #fff; border-radius: 8px; padding: 8px 12px; cursor: pointer; font: inherit; }
+button:hover { border-color: #256b57; }
+input { border: 1px solid #b9c7c1; border-radius: 6px; padding: 6px 8px; font: inherit; width: 80px; }
+table { width: 100%; border-collapse: collapse; font-size: .88rem; background: #fff; }
+th, td { text-align: left; padding: 8px; border-top: 1px solid #d9e3de; vertical-align: top; }
+.estado-ok td:nth-child(2) { color: #1d6b3c; font-weight: 700; }
+.estado-falhou td:nth-child(2) { color: #a3261b; font-weight: 700; }
+.estado-informativo td:nth-child(2) { color: #1f5c8a; font-weight: 700; }
+#contexto { font-size: .82rem; word-break: break-word; }

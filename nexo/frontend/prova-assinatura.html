@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="pt-MZ">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Nexo · Prova técnica de assinatura</title>
+  </head>
+  <body>
+    <main id="prova">
+      <p class="faixa">Prova técnica isolada (Etapa 1, hipótese H-23). Não faz parte do protótipo nem do produto.</p>
+      <h1>Assinatura por utilizador e dispositivo</h1>
+      <p class="explicacao">
+        Três coisas diferentes: a <strong>identidade humana</strong> (quem está ao balcão), o <strong>desbloqueio por PIN</strong>
+        (verificado só pela aplicação) e o <strong>uso da chave</strong> (a assinatura).
+        <strong>Uma assinatura não prova que o PIN foi introduzido.</strong>
+      </p>
+      <section>
+        <h2>Contexto</h2>
+        <p id="contexto">A verificar…</p>
+      </section>
+      <section>
+        <h2>Passos manuais</h2>
+        <div class="botoes">
+          <button id="b-gerar" type="button">1. Gerar chave e guardar no IndexedDB</button>
+          <button id="b-reiniciar" type="button">2. Usar a chave guardada (depois de reiniciar)</button>
+          <button id="b-encerrar" type="button">3. Testar encerramento de chave</button>
+          <button id="b-tempos" type="button">4. Medir tempo de assinatura</button>
+          <button id="b-limpar" type="button">5. Apagar a base IndexedDB da prova</button>
+        </div>
+        <div class="pin">
+          <label>PIN de teste (1234) <input id="pin" type="password" inputmode="numeric" autocomplete="off" /></label>
+          <button id="b-desbloquear" type="button">Desbloquear</button>
+          <button id="b-assinar-pin" type="button">Assinar com desbloqueio</button>
+          <button id="b-assinar-sem-pin" type="button">Assinar sem desbloqueio (limite)</button>
+        </div>
+      </section>
+      <section>
+        <h2>Resultados</h2>
+        <table>
+          <thead>
+            <tr><th>Teste</th><th>Resultado</th><th>Detalhe</th></tr>
+          </thead>
+          <tbody id="resultados"></tbody>
+        </table>
+        <pre id="resultado-json" hidden></pre>
+      </section>
+    </main>
+    <script type="module" src="/src/prova/main.ts"></script>
+  </body>
+</html>
