@@ -19,6 +19,10 @@ import { FormularioProduto } from './features/produtos/FormularioProduto'
 import { ListaProdutos } from './features/produtos/ListaProdutos'
 import { Relatorios } from './features/relatorios/Relatorios'
 import { Sincronizacao } from './features/sincronizacao/Sincronizacao'
+import { EstadoSistema } from './features/sistema/EstadoSistema'
+import { ModoApi } from './app/ModoApi'
+import { AvisoActualizacao } from './components/AvisoActualizacao'
+import { configuracao } from './config/ambiente'
 import { Balcao } from './features/vendas/Balcao'
 import { DetalheVenda } from './features/vendas/DetalheVenda'
 import { Historico } from './features/vendas/Historico'
@@ -55,6 +59,8 @@ function Ecra({ rota }: { rota: string[] }) {
       return <Relatorios />
     case 'sincronizacao':
       return <Sincronizacao />
+    case 'sistema':
+      return <EstadoSistema />
     default:
       return (
         <EstadoVazio titulo="Página não encontrada" accao={<a href="#/painel">Ir para o painel</a>}>
@@ -82,11 +88,20 @@ function Encaminhador() {
   )
 }
 
+// O modo escolhe a árvore inteira: a demonstração (dados fictícios, login simulado) e a
+// infraestrutura real não partilham estado.
 function App() {
   return (
-    <DemoProvider>
-      <Encaminhador />
-    </DemoProvider>
+    <>
+      <AvisoActualizacao />
+      {configuracao.modo === 'demonstracao' ? (
+        <DemoProvider>
+          <Encaminhador />
+        </DemoProvider>
+      ) : (
+        <ModoApi />
+      )}
+    </>
   )
 }
 

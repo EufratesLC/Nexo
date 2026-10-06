@@ -8,7 +8,9 @@
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "preview": "vite preview",
-    "teste:fluxo": "node testes/fluxo/fluxo-cdp.mjs"
+    "teste:fluxo": "node testes/fluxo/fluxo-cdp.mjs",
+    "teste:pwa": "npm run build && node testes/pwa/pwa-cdp.mjs",
+    "teste:pwa-actualizacao": "node testes/pwa/actualizacao-cdp.mjs"
   },
   "dependencies": {
     "react": "^19.2.8",
@@ -22,5 +24,8 @@
     "oxlint": "^1.81.0",
     "typescript": "~6.0.2",
     "vite": "^8.3.0"
+  },
+  "engines": {
+    "node": ">=22.4"
   }
 }

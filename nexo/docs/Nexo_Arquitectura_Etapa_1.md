@@ -1,14 +1,25 @@
 # Nexo — Arquitectura da Etapa 1
 
-Versão 0.4 · 2 de Outubro de 2026 · Estado: **proposta para validação — não aprovada no seu conjunto.** Só **H-01** está aprovada (02/10/2026, secções 3 e 19.7)
+Versão 0.5 · 3 de Outubro de 2026 · Estado: **proposta para validação — não aprovada no seu conjunto.** Só **H-01** está aprovada (02/10/2026, secções 3 e 19.7)
 
 Base: `docs/Nexo_Especificacao_Etapa_0.md`, versão 0.5. A especificação continua em validação: **nenhuma sugestão ou decisão em aberto é tratada aqui como aprovada**. Onde este documento escolhe uma opção, marca-a como **proposta** e indica a decisão de que depende (H-xx).
 
 Este documento propõe o modelo de dados e os contratos. **Não foram criadas migrações definitivas** nem executada nenhuma migração numa base real. O teste de isolamento da secção 19 foi **executado num projecto Supabase de desenvolvimento** a 02/10/2026 (22/22). Cobre um esquema mínimo, não o modelo completo nem a API.
 
-Versões anteriores: `docs/versoes/Nexo_Arquitectura_Etapa_1_v0.1.md`, `docs/versoes/Nexo_Arquitectura_Etapa_1_v0.2.md`, `docs/versoes/Nexo_Arquitectura_Etapa_1_v0.3.md`.
+Versões anteriores: `docs/versoes/Nexo_Arquitectura_Etapa_1_v0.1.md`, `docs/versoes/Nexo_Arquitectura_Etapa_1_v0.2.md`, `docs/versoes/Nexo_Arquitectura_Etapa_1_v0.3.md`, `docs/versoes/Nexo_Arquitectura_Etapa_1_v0.4.md`.
 
 ---
+
+## Alterações da versão 0.5 (implementação da Etapa 2)
+
+Só regista o que a Etapa 2 implementou; não aprova nenhuma outra proposta. Detalhe em `docs/Nexo_Entrega_Etapa_2.md`.
+
+| # | O que mudou | Onde |
+|---|---|---|
+| 1 | Marca da transacção revista antes de ser generalizada: `pid:início`, uma só definição por transacção, só dentro de um papel de execução. Limites documentados | 3.2 |
+| 2 | Novo papel `nexo_diagnostico` (dono de `nexo.estado_base()`); `nexo_autenticacao` só será criado com `autenticar_registo` (Etapa 7) | 3.1 |
+| 3 | Base das rotas: `/api/v1` | 6.1 |
+| 4 | Estado das partes da Etapa 2 | 18.2 |
 
 ## Alterações da versão 0.4 (decisão H-01)
 
@@ -165,7 +176,8 @@ A decisão aprova o princípio: papéis próprios sem BYPASSRLS, contexto local 
 | `nexo_operador` | Não | Não | Pedidos online de membros com função **operador**. **Sem nenhum privilégio nas tabelas de custo** (3.7) |
 | `nexo_gestao` | Não | Não | Pedidos online de **proprietário e gestor**. As diferenças entre os dois (configuração, funções, contas) verificam-se na API e, nas tabelas administrativas, por política com `nexo.funcao` |
 | `nexo_sincronizacao` | Não | Não | Aplicação de operações de balcão (secção 8) |
-| `nexo_autenticacao` | Não, e **sem membros** | Não | Dono da função `nexo.autenticar_registo` (3.4). Ninguém pode assumir este papel |
+| `nexo_autenticacao` | Não, e **sem membros** | Não | Dono da função `nexo.autenticar_registo` (3.4). Ninguém pode assumir este papel. **Ainda não criado:** entra com a função, na Etapa 7 |
+| `nexo_diagnostico` (0.5) | Não | Não | Dono da função `nexo.estado_base()`, que dá à API a versão das migrações sem acesso à tabela de controlo. Criado na migração 0001 |
 | `service_role`, `postgres` (Supabase) | — | **Sim** | **Não usados** em pedidos nem na sincronização. Só em tarefas administrativas explícitas, auditadas e fora do caminho dos pedidos |
 
 **Mudança da 0.2:** o antigo `nexo_utilizador` divide-se em `nexo_operador` e `nexo_gestao`. Com um só papel, a protecção dos custos dependia de uma política com `nexo.funcao` em cada tabela de custo. Uma consulta nova que esquecesse a junção certa, ou uma tabela sem essa política, podia devolver custos. Com dois papéis, o **privilégio** da tabela recusa ao operador qualquer acesso (`permission denied`), seja qual for a consulta.
@@ -186,7 +198,7 @@ SELECT nexo.definir_contexto($empresa, $filial, $utilizador, $funcao, $registo);
 COMMIT;
 ```
 
-`nexo.definir_contexto` chama `set_config(…, true)` para cada valor e grava também uma **marca da transacção**: `nexo.inicio = extract(epoch from now())`. As funções usadas nas políticas (`nexo.empresa_actual()`, `nexo.registo_actual()`) só devolvem um valor se a marca for igual ao início da transacção **actual**.
+`nexo.definir_contexto` chama `set_config(…, true)` para cada valor e grava também uma **marca da transacção**: `nexo.marca = pg_backend_pid() || ':' || extract(epoch from now())` (0.5; na prova H-01 era só o instante). As funções usadas nas políticas (`nexo.empresa_actual()`, `nexo.registo_actual()`…) só devolvem um valor se a marca corresponder à transacção **actual**. `definir_contexto` recusa uma segunda definição na mesma transacção e recusa ser chamada fora de um papel de execução. O que a marca protege e os seus limites estão em `docs/Nexo_Entrega_Etapa_2.md`, secção 5.
 
 - `SET LOCAL` e `set_config(…, true)` valem só dentro da transacção. Isto é compatível com o *pooler* do Supabase em modo transacção. **Nunca** se usa `SET` de sessão.
 - **Defesa contra fugas no pool:** se algum código definir por erro um valor ao nível da sessão, esse valor pode passar para a transacção de outro cliente na mesma ligação do pool. A marca não corresponde ao início dessa transacção, e as políticas negam tudo (testes T05, T20 e P02).
@@ -605,7 +617,7 @@ A separação permite, por exemplo, que um novo catálogo substitua a loja `cata
 
 ### 6.1 Convenções
 
-- Base `https://<api>/v1`, JSON UTF-8, datas ISO 8601 em UTC, dinheiro em **centavos inteiros**, quantidades como texto decimal (`"1.250"`) para não perder precisão.
+- Base `https://<api>/api/v1` (0.5), JSON UTF-8, datas ISO 8601 em UTC, dinheiro em **centavos inteiros**, quantidades como texto decimal (`"1.250"`) para não perder precisão.
 - Autenticação: `Authorization: Bearer <JWT>` + `X-Nexo-Empresa: <uuid>` (utilizador), ou `Authorization: Nexo-Dispositivo <segredo>` (sincronização).
 - **Respostas por função:** cada rota tem esquemas de resposta por função (3.7.2). O operador nunca recebe custos.
 - Escritas online não repetíveis levam `Idempotency-Key: <uuid>`. A mesma chave com o mesmo pedido devolve a resposta guardada, com `"repeticao": true`. Com um pedido diferente devolve `409 idempotencia_conflito`.
@@ -1110,15 +1122,15 @@ Nenhuma destas propostas foi aplicada. Nenhuma funcionalidade de etapas seguinte
 
 | Parte da Etapa 2 (roteiro) | Pode avançar? | O que impede ou condiciona |
 |---|---|---|
-| Repositório | Sim | O projecto **não está em git**. O roteiro pede commit no GitHub: falta criar o repositório (decisão do proprietário: onde, privado) |
+| Repositório | Sim | **Feito:** Git com remoto no GitHub |
 | Frontend base (rotas, estado, formulários, estrutura) | Sim | Escolha de bibliotecas; não depende de H-xx |
 | Backend base (erros, registo de eventos, configuração) | Sim | — |
 | Qualidade de código (lint, tipos, testes, CI) | Sim | — |
-| Migrações: ferramenta e primeira migração (esquema `nexo`, papéis, `definir_contexto`, `autenticar_registo`) | Sim, quanto a H-01 (aprovada) | Têm de cumprir os requisitos de 19.7. A Etapa 2 continua **por iniciar** até indicação do proprietário do projecto |
+| Migrações: ferramenta e primeira migração (esquema `nexo`, papéis, `definir_contexto`) | **Feito na Etapa 2**, com os requisitos de 19.7 | Migrações 0001–0004 e verificação do catálogo **aplicadas no nexo-dev** pelo proprietário a 06/10/2026 (PostgreSQL 17.11); `test:base` 12/12. `autenticar_registo` fica para a Etapa 7 |
 | Migrações das tabelas de negócio | Não são da Etapa 2 | Entram por módulo: H-02 antes da 3; H-04/H-21 antes da 4; H-29 antes da 5 e 6; H-23 e H-28 antes da 7 |
 | Variáveis de ambiente de exemplo | Sim, sem segredos | — |
-| Ambientes de desenvolvimento | Parcial | Falta um projecto Supabase de desenvolvimento; e HTTPS local para testar telemóveis (a prova mostrou que é preciso) |
-| PWA e base local preparadas (17.2) | Sim | H-23 e H-28 não afectam: a loja `autorias` e os campos de custo local só são usados na Etapa 7 |
+| Ambientes de desenvolvimento | Feito, excepto HTTPS no telemóvel | Local e nexo-dev verificados (06/10/2026). HTTPS para telemóvel documentado (mkcert), **pendente** (necessário antes dos testes de H-23 nos aparelhos) |
+| PWA e base local preparadas (17.2) | **Feito na Etapa 2** | Service worker e manifesto; esquema IndexedDB v1 sem a loja `autorias` (H-23) e sem custos (H-28); contratos da fila sem implementação |
 | Guia de execução | Sim | — |
 
 ### 18.3 O que depende de H-23

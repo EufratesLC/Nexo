@@ -478,9 +478,102 @@ await passo('Pausa de contagem: bloqueia o balcão; sem rede não retoma; retoma
   exigir(!(await avaliar('__t.texto()')).includes('Vendas em pausa'), 'devia ter retomado')
 })
 
+// ---- Etapa 2: base técnica ----
+
+await passo('Estado do sistema: separado da demonstração; mostra a API real ou um erro tratado', async () => {
+  await ir('#/sistema')
+  await esperar(1500)
+  const t = await avaliar('__t.texto()')
+  exigir(t.includes('Infraestrutura real'), 'o menu devia separar a infraestrutura real da demonstração')
+  exigir(t.includes('Fora da demonstração'), 'falta o aviso de que a página não faz parte da demonstração')
+  if (t.includes('A responder')) {
+    exigir(/Base de dados[\s\S]*(Pronta|Indisponível)/.test(t), 'falta o estado da base de dados')
+    return 'API a correr: estado da API e da base mostrados'
+  }
+  exigir(t.includes('API indisponível') && t.includes('Tentar de novo') && t.includes('Pedido:'), 'sem API devia mostrar o erro tratado com o identificador do pedido')
+  return 'API não estava a correr: erro tratado mostrado'
+})
+
+await passo('Modo de demonstração: o cliente HTTP recusa escritas (nada é enviado à API)', async () => {
+  const r = await avaliar(`(async () => {
+    const { pedido } = await import('/src/servicos/http.ts')
+    try { await pedido('/v1/saude', { metodo: 'POST', corpo: {} }); return 'enviado' } catch (e) { return e.codigo }
+  })()`)
+  exigir(r === 'modo_demonstracao', 'a escrita devia ser recusada no modo de demonstração, obtido: ' + r)
+})
+
+await passo('Cliente HTTP: erros convertidos em códigos estáveis (fetch simulado)', async () => {
+  const r = await avaliar(`(async () => {
+    const { criarClienteHttp } = await import('/src/servicos/http.ts')
+    const config = { modo: 'api', apiUrl: '/api', tempoLimiteMs: 1000 }
+    const json = (estado, corpo, cab = {}) => new Response(JSON.stringify(corpo), { status: estado, headers: { 'Content-Type': 'application/json', ...cab } })
+    const casos = {
+      envelope: () => json(403, { erro: { codigo: 'permissao_negada', mensagem: 'Sem permissão.' } }, { 'X-Nexo-Pedido': 'id-servidor' }),
+      htmlDoProxy: () => new Response('<html>Bad Gateway</html>', { status: 502 }),
+      semRede: () => Promise.reject(new TypeError('Failed to fetch')),
+      tempo: (_u, op) => new Promise((_ok, falha) => op.signal.addEventListener('abort', () => falha(new DOMException('abortado', 'AbortError')))),
+      aceite503: () => json(503, { estado: 'indisponivel' }),
+    }
+    const res = {}
+    for (const [nome, impl] of Object.entries(casos)) {
+      const pedido = criarClienteHttp(config, impl)
+      try {
+        const r = await pedido('/v1/x', { aceitarEstados: nome === 'aceite503' ? [503] : [] })
+        res[nome] = 'ok ' + r.estado
+      } catch (e) {
+        res[nome] = e.codigo + (e.pedidoId === 'id-servidor' ? ' (id do servidor)' : '')
+      }
+    }
+    return res
+  })()`)
+  exigir(r.envelope === 'permissao_negada (id do servidor)', 'envelope: ' + r.envelope)
+  exigir(r.htmlDoProxy === 'sem_ligacao', 'HTML do proxy: ' + r.htmlDoProxy)
+  exigir(r.semRede === 'sem_ligacao', 'sem rede: ' + r.semRede)
+  exigir(r.tempo === 'tempo_esgotado', 'tempo limite: ' + r.tempo)
+  exigir(r.aceite503 === 'ok 503', '503 aceite: ' + r.aceite503)
+})
+
+await passo('Base local (IndexedDB): esquema v1 criado numa base de teste, aditivo, sem "autorias"; depois apagada', async () => {
+  const r = await avaliar(`(async () => {
+    const { abrirBaseLocal, apagarBaseDeTeste } = await import('/src/local/baseLocal.ts')
+    const { ESQUEMA_LOCAL } = await import('/src/local/esquema.ts')
+    const nome = 'nexo-teste-esquema'
+    let db = await abrirBaseLocal(nome)
+    const lojas = [...db.objectStoreNames]
+    const tx = db.transaction('fila', 'readwrite')
+    tx.objectStore('fila').put({ id: 'op-1', sequencia: 1 })
+    await new Promise((ok, erro) => { tx.oncomplete = ok; tx.onerror = () => erro(tx.error) })
+    db.close()
+    // Reabrir com uma versão 2 aditiva: a fila e o seu conteúdo mantêm-se.
+    db = await abrirBaseLocal(nome, [...ESQUEMA_LOCAL, { versao: 2, novasLojas: [{ grupo: 'controlo', nome: 'teste_v2', chave: 'id' }] }])
+    const fila = await new Promise((ok) => { const p = db.transaction('fila').objectStore('fila').get('op-1'); p.onsuccess = () => ok(p.result) })
+    const versao = db.version
+    const lojas2 = [...db.objectStoreNames]
+    db.close()
+    await apagarBaseDeTeste(nome)
+    let recusou = false
+    try { await apagarBaseDeTeste('nexo-empresa-qualquer') } catch { recusou = true }
+    return { lojas, versao, lojas2: lojas2.length, fila: fila && fila.id, recusou }
+  })()`)
+  exigir(r.lojas.length === 17, 'esperadas 17 lojas na v1, obtidas ' + r.lojas.length)
+  for (const l of ['fila', 'vendas_locais', 'sequencias', 'catalogo', 'credencial_registo']) exigir(r.lojas.includes(l), 'falta a loja ' + l)
+  exigir(!r.lojas.includes('autorias'), 'a loja autorias depende de H-23 e não deve existir')
+  exigir(r.versao === 2 && r.lojas2 === 18 && r.fila === 'op-1', 'a migração v2 devia ser aditiva e manter a fila')
+  exigir(r.recusou, 'só bases nexo-teste-* podem ser apagadas pelo utilitário de teste')
+})
+
+await passo('Os dados fictícios ficam em localStorage e não são copiados para IndexedDB', async () => {
+  const r = await avaliar(`(async () => ({
+    demo: localStorage.getItem('nexo-prototipo-estado') !== null,
+    bases: (await indexedDB.databases()).map((d) => d.name).filter((n) => n && n.startsWith('nexo-')),
+  }))()`)
+  exigir(r.demo, 'o estado da demonstração devia estar em localStorage')
+  exigir(r.bases.length === 0, 'não devia existir nenhuma base nexo-* em IndexedDB: ' + r.bases.join(', '))
+})
+
 // Largura de telemóvel: nenhum ecrã pode ter deslocamento horizontal da página.
 await cdp('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 2, mobile: true })
-for (const rota of ['#/painel', '#/balcao', '#/vendas', '#/caixa', '#/produtos', '#/produtos/novo', '#/compras', '#/compras/nova', '#/despesas', '#/relatorios', '#/sincronizacao']) {
+for (const rota of ['#/painel', '#/balcao', '#/vendas', '#/caixa', '#/produtos', '#/produtos/novo', '#/compras', '#/compras/nova', '#/despesas', '#/relatorios', '#/sincronizacao', '#/sistema']) {
   await passo(`Telemóvel 390 px sem deslocamento horizontal: ${rota}`, async () => {
     await ir(rota)
     await esperar(200)

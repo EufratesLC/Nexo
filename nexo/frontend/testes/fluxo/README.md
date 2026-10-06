@@ -1,6 +1,6 @@
 # Teste automático do fluxo do protótipo
 
-`fluxo-cdp.mjs` percorre o protótipo num navegador Chromium sem interface, através do Chrome DevTools Protocol, e verifica 32 passos.
+`fluxo-cdp.mjs` percorre o protótipo num navegador Chromium sem interface, através do Chrome DevTools Protocol, e verifica 38 passos.
 
 **Origem:** é o script usado na verificação da Etapa 1 (27 passos), recuperado e alargado na revisão com as correcções da contagem cega, dos custos visíveis ao operador e da pausa de contagem. Não foi recriado: o original existia e foi copiado para o projecto.
 
@@ -39,7 +39,7 @@ OK     Login demonstrativo mostra o aviso e os 3 perfis
 …
 OK     Sem erros na consola durante o fluxo
 
-32/32 passos OK
+38/38 passos OK
 ```
 
 O código de saída é 0 se todos passarem e 1 se algum falhar. Guarda capturas de ecrã (login, balcão, comprovativo, venda pendente, conflito, fecho, relatórios, telemóvel) na pasta de capturas.
@@ -53,11 +53,13 @@ O código de saída é 0 se todos passarem e 1 se algum falhar. Guarda capturas 
 | Contagem cega (proposta H-15) | O esperado não está no documento antes de registar a contagem; esperado 3 136,00 e falta de 136,00 depois; justificação obrigatória; recontagem guarda a primeira; o gestor vê as duas; com a janela de fecho aberta, o gestor também não vê o esperado por trás |
 | Gestão | Relatórios provisórios com os três indicadores; conflito anulado com nota; validação de produto e código de barras duplicado; recepção que aumenta o stock uma única vez (8 → 23) |
 | Pausa de contagem | Bloqueia o balcão; sem rede não retoma; retoma só pelo servidor; confirmações de pausa e de retoma na lista de operações; nenhuma acção de retoma local |
-| Telemóvel | 11 ecrãs a 390 px sem deslocamento horizontal |
+| Base técnica (Etapa 2) | Estado do sistema separado da demonstração (API real ou erro tratado); o cliente HTTP recusa escritas no modo de demonstração; erros do cliente HTTP com `fetch` simulado; esquema IndexedDB v1 numa base de teste (aditivo, sem `autorias`), depois apagada; dados fictícios só em `localStorage` |
+| Telemóvel | 12 ecrãs a 390 px sem deslocamento horizontal |
 | Consola | Sem erros |
 
 ## Limitações
 
+- Funciona com ou sem a API a correr (o passo do estado do sistema aceita os dois casos e diz qual encontrou).
 - Testa **só a interface do protótipo**, que não tem servidor: a sincronização, os estados e as permissões são simulados no navegador. Não testa a API, a base de dados nem o funcionamento offline real.
 - As verificações de "sem custos para o operador" confirmam só o que o ecrã mostra. No protótipo todos os dados fictícios, incluindo custos, estão no `localStorage`.
 - Corre sem interface gráfica, em Chromium, neste tipo de computador. Não substitui testes em telemóveis reais nem noutros navegadores.

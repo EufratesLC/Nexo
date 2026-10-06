@@ -1,0 +1,14 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": ["typescript", "oxc", "node"],
+  "rules": {
+    "no-console": ["warn", { "allow": ["error"] }]
+  },
+  "overrides": [
+    {
+      "files": ["src/base/migracoes/cli.ts", "src/**/*.test.ts", "testes/**"],
+      "rules": { "no-console": "off" }
+    }
+  ],
+  "ignorePatterns": ["dist", "testes/isolamento"]
+}

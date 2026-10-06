@@ -73,8 +73,9 @@ export function Shell({ rotaActual, children }: { rotaActual: string; children: 
       <div className="corpo">
         <nav id="menu-principal" className={`menu ${menuAberto ? 'menu-aberto' : ''}`} aria-label="Principal">
           <ul>
-            {itens.map((item) => (
-              <li key={item.rota}>
+            {itens.map((item, i) => (
+              <li key={item.rota} className={item.area === 'sistema' && itens[i - 1]?.area !== 'sistema' ? 'menu-separado' : undefined}>
+                {item.area === 'sistema' && itens[i - 1]?.area !== 'sistema' && <span className="menu-grupo">Infraestrutura real</span>}
                 <a
                   href={`#/${item.rota}`}
                   className={rotaActual === item.rota ? 'activo' : ''}

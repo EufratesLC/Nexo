@@ -11,3 +11,11 @@ coverage/
 .vscode/
 .DS_Store
 Thumbs.db
+
+# Certificados e chaves locais (HTTPS de desenvolvimento, CA da base). Nunca no Git.
+certificados/
+certificado/
+*.pem
+*.key
+*.crt
+*.p12

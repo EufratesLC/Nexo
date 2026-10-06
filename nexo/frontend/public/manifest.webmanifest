@@ -1,0 +1,14 @@
+{
+  "name": "Nexo",
+  "short_name": "Nexo",
+  "description": "Gestão comercial, financeira e de stock para pequenos estabelecimentos.",
+  "lang": "pt-MZ",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f7faf8",
+  "theme_color": "#256b57",
+  "icons": [
+    { "src": "/icone.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}

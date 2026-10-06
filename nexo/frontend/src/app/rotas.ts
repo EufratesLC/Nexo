@@ -1,5 +1,6 @@
-// Encaminhamento mínimo por hash (#/balcao, #/vendas/123). Suficiente para o
-// protótipo; a escolha de biblioteca de rotas fica para a Etapa 2.
+// Encaminhamento mínimo por hash (#/balcao, #/vendas/123). Mantido na Etapa 2: chega para os
+// ecrãs actuais sem dependências. Uma biblioteca de rotas só entra quando houver rotas reais
+// com carregamento de dados (Etapa 3 em diante).
 
 import { useEffect, useState } from 'react'
 

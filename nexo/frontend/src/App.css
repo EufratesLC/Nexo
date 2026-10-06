@@ -208,3 +208,19 @@ fieldset.linhas-compra { border: 1px solid var(--linha); border-radius: var(--ra
   .detalhe-venda { display: block; }
   .comprovativo { border: 0; max-width: 80mm; }
 }
+
+/* Estados comuns (Etapa 2) */
+.estado-carregando { display: flex; align-items: center; gap: 10px; padding: 20px 16px; color: var(--texto-2); }
+.indicador-carregamento { width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--linha); border-top-color: var(--verde); animation: rodar .8s linear infinite; }
+@keyframes rodar { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .indicador-carregamento { animation: none; } }
+.estado-erro { border: 1px solid #f3c1bb; background: var(--perigo-fundo); color: #6e1911; border-radius: var(--raio); padding: 12px 14px; display: flex; flex-direction: column; gap: 6px; align-items: flex-start; }
+.estado-erro p { margin: 0; }
+.estado-erro code { overflow-wrap: anywhere; }
+.faixa-actualizacao { background: var(--info-fundo); color: #173f5e; border-bottom: 1px solid #bcd6ec; padding: 8px 16px; display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; justify-content: center; font-size: .9rem; }
+.lista-estado { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.lista-estado li { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 12px; border-bottom: 1px solid var(--linha); padding-bottom: 8px; }
+.lista-estado li:last-child { border-bottom: 0; padding-bottom: 0; }
+.modo-api { max-width: 920px; margin: 0 auto; padding: 16px; display: flex; flex-direction: column; gap: 16px; }
+.menu-separado { margin-top: 12px; padding-top: 8px; border-top: 1px solid var(--linha); }
+.menu-grupo { display: block; font-size: .72rem; text-transform: uppercase; letter-spacing: .06em; color: var(--texto-2); padding: 0 12px 4px; }

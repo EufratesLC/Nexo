@@ -7,6 +7,8 @@
 
 import { webcrypto } from 'node:crypto'
 import { Router } from 'express'
+import { z } from 'zod'
+import { validar } from '../http/validar.js'
 
 const subtle = webcrypto.subtle
 const ALGORITMO_CHAVE = { name: 'ECDSA', namedCurve: 'P-256' } as const
@@ -120,7 +122,7 @@ export function routerProvaAssinatura() {
       } catch (erro) {
         if (erro instanceof ErroProva) res.status(400).json({ erro: { codigo: 'pedido_invalido', mensagem: erro.message } })
         else {
-          console.error(erro)
+          req.log?.error({ err: erro }, 'erro na prova técnica')
           res.status(500).json({ erro: { codigo: 'erro_interno', mensagem: 'Erro inesperado na prova técnica.' } })
         }
       }
@@ -128,6 +130,9 @@ export function routerProvaAssinatura() {
 
   router.post(
     '/chaves',
+    validar({
+      corpo: z.object({ jwk: z.record(z.string(), z.unknown()), utilizador: z.string().min(1).max(100), registo: z.string().min(1).max(100) }),
+    }),
     tratar(async (req) => {
       const { jwk, utilizador, registo } = req.body ?? {}
       const chave = await armazem.registar(jwk ?? {}, String(utilizador ?? ''), String(registo ?? ''))
@@ -137,6 +142,7 @@ export function routerProvaAssinatura() {
 
   router.post(
     '/chaves/:chaveId/encerrar',
+    validar({ corpo: z.object({ aposSequencia: z.number().int().min(0) }) }),
     tratar((req) => {
       const chave = armazem.encerrar(String(req.params.chaveId), Number(req.body?.aposSequencia))
       return { chaveId: chave.chaveId, encerradaApos: chave.encerradaApos }

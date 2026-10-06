@@ -7,19 +7,33 @@
     "dev": "tsx watch src/server.ts",
     "build": "tsc",
     "start": "node dist/server.js",
+    "lint": "oxlint",
     "typecheck": "tsc --noEmit",
-    "test": "tsx --test src/prova/assinatura.test.ts testes/custo/custo_efectivo.test.mjs"
+    "test": "tsx --test testes/unidade/*.test.ts src/prova/assinatura.test.ts testes/custo/custo_efectivo.test.mjs",
+    "test:base": "tsx --test testes/base/*.test.ts",
+    "db:estado": "tsx src/base/migracoes/cli.ts estado",
+    "db:migrar": "tsx src/base/migracoes/cli.ts migrar",
+    "db:verificar": "tsx src/base/migracoes/cli.ts verificar",
+    "db:senha-api": "tsx src/base/migracoes/cli.ts senha-api"
   },
   "dependencies": {
     "cors": "^2.8.6",
     "dotenv": "^18.0.4",
-    "express": "^5.2.1"
+    "express": "^5.2.1",
+    "pg": "^8.23.1",
+    "pino": "^10.4.0",
+    "zod": "^4.6.5"
   },
   "devDependencies": {
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
     "@types/node": "^26.6.3",
+    "@types/pg": "^8.23.1",
+    "oxlint": "^1.86.0",
     "tsx": "^4.23.15",
     "typescript": "^7.0.2"
+  },
+  "engines": {
+    "node": ">=22.4"
   }
 }
