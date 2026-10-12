@@ -18,6 +18,9 @@ function baseSimulada(estado: EstadoBase | 'falhar'): AcessoBase {
       if (estado === 'falhar') throw new Error('ligação postgresql://nexo_api:SegredoMuitoForte@servidor/postgres recusou')
       return estado
     },
+    chamarIdentidade: async () => {
+      throw new Error('não usado')
+    },
     encerrar: async () => {},
   }
 }

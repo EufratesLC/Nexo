@@ -13,7 +13,16 @@ test('as migrações do projecto são válidas, ordenadas e não usam o esquema 
   const ms = lerMigracoes(PASTA)
   assert.deepEqual(
     ms.map((m) => `${m.versao}_${m.nome}:${m.executarComo}`),
-    ['0001_papeis_e_esquemas:administrador', '0002_contexto:nexo_proprietario', '0003_empresas_e_filiais:nexo_proprietario', '0004_diagnostico:administrador'],
+    [
+      '0001_papeis_e_esquemas:administrador',
+      '0002_contexto:nexo_proprietario',
+      '0003_empresas_e_filiais:nexo_proprietario',
+      '0004_diagnostico:administrador',
+      '0005_papel_autenticacao:administrador',
+      '0006_identidade:nexo_proprietario',
+      '0007_funcoes_identidade:administrador',
+      '0008_activacao_pendente:administrador',
+    ],
   )
   for (const m of ms) {
     assert.ok(!/nexo_iso/.test(m.conteudo), `${m.ficheiro} refere nexo_iso`)
@@ -99,10 +108,10 @@ test('aplica só as pendentes, cada uma na sua transacção, com o papel indicad
   const ms = lerMigracoes(PASTA)
   const { cliente, comandos } = clienteSimulado([{ versao: ms[0].versao, nome: ms[0].nome, resumo: ms[0].resumo }])
   const aplicadas = await aplicarMigracoes(cliente, ms)
-  assert.deepEqual(aplicadas.map((m) => m.versao), ['0002', '0003', '0004'])
-  assert.equal(comandos.filter((c) => c === 'BEGIN').length, 3)
-  assert.equal(comandos.filter((c) => c === 'COMMIT').length, 3)
-  assert.equal(comandos.filter((c) => c === 'SET LOCAL ROLE nexo_proprietario').length, 2)
+  assert.deepEqual(aplicadas.map((m) => m.versao), ['0002', '0003', '0004', '0005', '0006', '0007', '0008'])
+  assert.equal(comandos.filter((c) => c === 'BEGIN').length, 7)
+  assert.equal(comandos.filter((c) => c === 'COMMIT').length, 7)
+  assert.equal(comandos.filter((c) => c === 'SET LOCAL ROLE nexo_proprietario').length, 3)
   assert.ok(comandos[0].includes('pg_advisory_lock'))
   assert.ok(comandos.at(-1)?.includes('pg_advisory_unlock'))
 })

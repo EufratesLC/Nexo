@@ -1,4 +1,5 @@
-// Testes da base REAL: transacções, contexto, papéis e privilégios das migrações 0001–0004.
+// Testes da base REAL: transacções, contexto, papéis e privilégios das migrações (0001 em diante).
+// A identidade e a autorização da Etapa 3 estão em identidade.test.ts e api.test.ts.
 //
 // Precisam de uma base com as migrações aplicadas e destas variáveis (ver docs/Nexo_Ambientes.md):
 //   NEXO_TESTE_API_URL     ligação como nexo_api (no Supabase: Transaction pooler, porta 6543)
@@ -13,6 +14,7 @@
 // apagados pela ligação administrativa. Nada é apagado além desses identificadores.
 process.env.NEXO_AMBIENTE = 'teste'
 
+import './verificacaoPrevia.js' // uma ligação de cada tipo antes de tudo (ver o ficheiro)
 import assert from 'node:assert/strict'
 import { randomUUID } from 'node:crypto'
 import { readFileSync } from 'node:fs'
@@ -20,6 +22,7 @@ import { join } from 'node:path'
 import { after, before, describe, test } from 'node:test'
 import pg from 'pg'
 import { criarAcessoBase, type AcessoBase } from '../../src/base/acesso.js'
+import { lerMigracoes } from '../../src/base/migracoes/executor.js'
 import { SEM_CONTEXTO } from '../../src/base/contexto.js'
 import { contextoDeTeste } from '../../src/base/contexto.testes.js'
 import { lerConfiguracao } from '../../src/config/ambiente.js'
@@ -87,7 +90,9 @@ async function codigoDoErro(promessa: Promise<unknown>): Promise<string | undefi
   }
 }
 
-describe('base de dados real (migrações 0001–0004)', { skip: motivoSalto }, () => {
+const ULTIMA_MIGRACAO = lerMigracoes(join(import.meta.dirname, '..', '..', 'migracoes')).at(-1)?.versao
+
+describe('base de dados real (migrações e isolamento)', { skip: motivoSalto }, () => {
   let acesso: AcessoBase
 
   before(async () => {
@@ -99,7 +104,7 @@ describe('base de dados real (migrações 0001–0004)', { skip: motivoSalto }, 
       await c.query('ALTER TABLE nexo.empresas NO FORCE ROW LEVEL SECURITY')
       await c.query('ALTER TABLE nexo.filiais NO FORCE ROW LEVEL SECURITY')
       for (const [e, nome] of [[A, 'TESTE AUTOMATICO A'], [B, 'TESTE AUTOMATICO B']] as const) {
-        await c.query('INSERT INTO nexo.empresas (id, nome) VALUES ($1, $2)', [e.empresa, nome])
+        await c.query('INSERT INTO nexo.empresas (id, codigo, nome) VALUES ($1, $2, $3)', [e.empresa, `teste-${e.empresa.slice(0, 8)}`, nome])
         await c.query("INSERT INTO nexo.filiais (id, empresa_id, codigo, nome) VALUES ($1, $2, 'F01', 'Filial de teste')", [e.filial, e.empresa])
       }
       await c.query('ALTER TABLE nexo.empresas FORCE ROW LEVEL SECURITY')
@@ -127,8 +132,8 @@ describe('base de dados real (migrações 0001–0004)', { skip: motivoSalto }, 
     })
   })
 
-  test('diagnóstico: base disponível, papel seguro, migração 0004', async () => {
-    assert.deepEqual(await acesso.diagnosticar(), { disponivel: true, papelSeguro: true, versaoMigracao: '0004' })
+  test('diagnóstico: base disponível, papel seguro, última migração do projecto', async () => {
+    assert.deepEqual(await acesso.diagnosticar(), { disponivel: true, papelSeguro: true, versaoMigracao: ULTIMA_MIGRACAO })
   })
 
   test('falta de contexto: nenhuma linha, para gestão e operador', async () => {

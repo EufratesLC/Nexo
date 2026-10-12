@@ -59,3 +59,37 @@ test('o contexto verificado só é criado em contexto.testes.ts (nenhum atalho a
     assert.ok(!/from\s+'[^']*contexto\.testes/.test(f.texto), `${f.caminho} importa o criador de contextos de teste`)
   }
 })
+
+test('Etapa 3: a sessão validada só nasce no serviço de identidade, com o que a base devolveu', () => {
+  for (const f of fontes) {
+    if (f.caminho === 'src/servicos/identidade.ts') continue
+    // (A declaração do tipo, "readonly [MARCA_SESSAO]: true", não cria nada.)
+    assert.ok(!/(?<!readonly\s)\[MARCA_SESSAO\]\s*:/.test(semComentarios(f.texto)), `${f.caminho} cria uma SessaoValidada`)
+  }
+  const identidade = fontes.find((f) => f.caminho === 'src/servicos/identidade.ts')!.texto
+  // Criada só em sessaoDaBase(), a partir de uma linha de nexo.validar_sessao.
+  assert.equal(identidade.match(/\[MARCA_SESSAO\]\s*:/g)?.length, 1)
+  assert.match(identidade, /chamarIdentidade<LinhaSessao>\('validar_sessao'/)
+})
+
+test('Etapa 3: o pedido nunca fornece empresa, utilizador ou função ao contexto', () => {
+  for (const f of fontes) {
+    if (!f.caminho.startsWith('src/rotas/') && !f.caminho.startsWith('src/autenticacao/')) continue
+    const t = semComentarios(f.texto)
+    assert.ok(!/contextoDaSessao\([^)]*req\.(body|query|params)/.test(t), `${f.caminho}: contexto a partir do corpo/consulta`)
+    assert.ok(!/empresaId\s*:\s*req\./.test(t), `${f.caminho}: empresa a partir do pedido`)
+  }
+})
+
+test('registo (0008): registar() não abre sessão; o ecrã de registo do frontend não inicia sessão', () => {
+  const identidade = semComentarios(fontes.find((f) => f.caminho === 'src/servicos/identidade.ts')!.texto)
+  const inicio = identidade.indexOf('async registar(')
+  const corpo = identidade.slice(inicio, identidade.indexOf('async confirmarEmail(', inicio))
+  assert.ok(inicio > 0 && corpo.length > 0, 'registar() não encontrado')
+  assert.ok(!/\bentrar\(|iniciar_sessao|gerarToken\('sessao'\)/.test(corpo), 'registar() cria uma sessão')
+  const rotas = semComentarios(fontes.find((f) => f.caminho === 'src/rotas/autenticacao.ts')!.texto)
+  const registo = rotas.slice(rotas.indexOf("'/registo'"), rotas.indexOf("'/activacao/reenviar'"))
+  assert.ok(!/Set-Cookie|cookieSessao/.test(registo), 'a rota de registo emite cookie')
+  const ecra = readFileSync(join(RAIZ, '..', 'frontend', 'src', 'real', 'ecras', 'CriarEmpresa.tsx'), 'utf8')
+  assert.ok(!/useSessao|iniciar\(/.test(semComentarios(ecra)), 'o ecrã de registo inicia uma sessão no frontend')
+})

@@ -160,4 +160,105 @@ SELECT 'funcao_com_dono_inesperado', nome || ' (' || dono || ')'
 UNION ALL
 SELECT 'funcao_definer_sem_dono_dedicado', nome || ' (' || dono || ')'
   FROM funcoes WHERE prosecdef AND dono NOT IN ('nexo_diagnostico', 'nexo_autenticacao')
+UNION ALL
+-- 21. (Etapa 3) Credenciais, sessões e tokens de e-mail: nenhum privilégio (nem por coluna) para a
+--     API, os papéis de execução ou o diagnóstico. Só nexo_autenticacao, pelas suas funções.
+SELECT 'tabela_de_identidade_acessivel', p.nome || ' em ' || t.relname
+  FROM tabelas t
+ CROSS JOIN (VALUES ('nexo_api'), ('nexo_operador'), ('nexo_gestao'), ('nexo_sincronizacao'), ('nexo_diagnostico')) p(nome)
+ WHERE t.relname IN ('credenciais_acesso', 'sessoes', 'tokens_email')
+   AND (pg_catalog.has_table_privilege(p.nome, t.oid, 'SELECT,INSERT,UPDATE,DELETE,TRUNCATE,REFERENCES')
+        OR pg_catalog.has_any_column_privilege(p.nome, t.oid, 'SELECT,INSERT,UPDATE,REFERENCES'))
+UNION ALL
+-- 22. Contactos de recuperação: só a gestão lê (a política limita à própria conta); ninguém escreve
+--     directamente. O operador e a sincronização não lhes tocam.
+SELECT 'contactos_recuperacao_acessiveis', p.nome
+  FROM tabelas t
+ CROSS JOIN (VALUES ('nexo_api'), ('nexo_operador'), ('nexo_sincronizacao'), ('nexo_diagnostico')) p(nome)
+ WHERE t.relname = 'contactos_recuperacao'
+   AND pg_catalog.has_any_column_privilege(p.nome, t.oid, 'SELECT,INSERT,UPDATE,REFERENCES')
+UNION ALL
+SELECT 'contactos_recuperacao_escrita_directa', 'nexo_gestao'
+  FROM tabelas t
+ WHERE t.relname = 'contactos_recuperacao'
+   AND pg_catalog.has_any_column_privilege('nexo_gestao', t.oid, 'INSERT,UPDATE')
+UNION ALL
+-- 23. Auditoria imutável: ninguém do Nexo (além do dono) pode alterar ou apagar; o trigger existe.
+SELECT 'auditoria_alteravel', p.nome
+  FROM tabelas t
+ CROSS JOIN (VALUES ('nexo_api'), ('nexo_operador'), ('nexo_gestao'), ('nexo_sincronizacao'), ('nexo_autenticacao'), ('nexo_diagnostico')) p(nome)
+ WHERE t.relname = 'registo_auditoria'
+   AND (pg_catalog.has_table_privilege(p.nome, t.oid, 'UPDATE,DELETE,TRUNCATE')
+        OR pg_catalog.has_any_column_privilege(p.nome, t.oid, 'UPDATE'))
+UNION ALL
+SELECT 'auditoria_sem_trigger_de_imutabilidade', t.relname
+  FROM tabelas t
+ WHERE t.relname = 'registo_auditoria'
+   AND NOT EXISTS (SELECT 1 FROM pg_catalog.pg_trigger g WHERE g.tgrelid = t.oid AND g.tgname = 'registo_auditoria_imutavel' AND g.tgenabled <> 'D')
+UNION ALL
+-- 24. Ninguém pertence a nexo_autenticacao com SET ou herança (o administrador só tem ADMIN, do CREATE ROLE).
+SELECT 'papel_autenticacao_com_membros', u.rolname
+  FROM pg_catalog.pg_auth_members m
+  JOIN pg_catalog.pg_roles r ON r.oid = m.roleid
+  JOIN pg_catalog.pg_roles u ON u.oid = m.member
+ WHERE r.rolname = 'nexo_autenticacao' AND (m.set_option OR m.inherit_option)
+UNION ALL
+-- 25. Quem executa cada função de nexo_autenticacao: exactamente a matriz prevista (0007).
+SELECT 'funcao_autenticacao_execucao_inesperada', f.nome || ' por ' || pg_catalog.pg_get_userbyid(x.grantee)
+  FROM funcoes f, aclexplode(f.proacl) x
+ WHERE f.dono = 'nexo_autenticacao' AND x.privilege_type = 'EXECUTE' AND x.grantee <> 0
+   AND pg_catalog.pg_get_userbyid(x.grantee) <> 'nexo_autenticacao'
+   AND NOT EXISTS (
+     SELECT 1 FROM (VALUES
+       ('nexo.parametros_acesso(text,text)', 'nexo_api'),
+       ('nexo.iniciar_sessao(text,text,bytea,bytea,interval,interval)', 'nexo_api'),
+       ('nexo.validar_sessao(bytea)', 'nexo_api'),
+       ('nexo.terminar_sessao(bytea)', 'nexo_api'),
+       ('nexo.registar_empresa(text,text,text,text,text,text,text,text,bytea,bytea,bytea,interval)', 'nexo_api'),
+       ('nexo.confirmar_email(bytea)', 'nexo_api'),
+       ('nexo.pedir_recuperacao(text,text,bytea,interval)', 'nexo_api'),
+       ('nexo.concluir_recuperacao(bytea,text,bytea,bytea)', 'nexo_api'),
+       ('nexo.parametros_acesso_proprios()', 'nexo_operador'),
+       ('nexo.parametros_acesso_proprios()', 'nexo_gestao'),
+       ('nexo.alterar_codigo_proprio(uuid,bytea,text,bytea,bytea)', 'nexo_operador'),
+       ('nexo.alterar_codigo_proprio(uuid,bytea,text,bytea,bytea)', 'nexo_gestao'),
+       ('nexo.definir_codigo(uuid,text,bytea,bytea)', 'nexo_gestao'),
+       ('nexo.revogar_sessoes(uuid,text)', 'nexo_gestao'),
+       ('nexo.definir_email_recuperacao(bytea,text,bytea,interval)', 'nexo_gestao'),
+       ('nexo.reenviar_confirmacao_email(bytea,interval)', 'nexo_gestao'),
+       ('nexo.suporte_emitir_recuperacao(text,text,bytea,interval,text)', 'nexo_proprietario'),
+       ('nexo.reenviar_activacao(text,text,bytea,interval)', 'nexo_api'),
+       ('nexo.corrigir_email_activacao(text,text,bytea,text,bytea,interval)', 'nexo_api')
+     ) e(funcao, papel)
+     WHERE e.funcao = replace(f.nome, ' ', '') AND e.papel = pg_catalog.pg_get_userbyid(x.grantee))
+UNION ALL
+-- 26. A sincronização não toca nas tabelas de identidade (Etapa 7 decide o que precisa).
+SELECT 'sincronizacao_com_acesso_a_identidade', t.relname
+  FROM tabelas t
+ WHERE t.relname IN ('utilizadores', 'utilizador_filiais', 'credenciais_acesso', 'sessoes', 'contactos_recuperacao', 'tokens_email', 'registo_auditoria')
+   AND (pg_catalog.has_table_privilege('nexo_sincronizacao', t.oid, 'SELECT,INSERT,UPDATE,DELETE')
+        OR pg_catalog.has_any_column_privilege('nexo_sincronizacao', t.oid, 'SELECT,INSERT,UPDATE'))
+UNION ALL
+-- 27. Escritas de utilizadores e filiais permitidas só pela gestão (com políticas de proprietário);
+--     o operador só lê a própria conta.
+SELECT 'operador_escreve_em_identidade', t.relname
+  FROM tabelas t
+ WHERE t.relname IN ('utilizadores', 'utilizador_filiais', 'empresas', 'filiais', 'registo_auditoria')
+   AND (pg_catalog.has_table_privilege('nexo_operador', t.oid, 'INSERT,UPDATE,DELETE')
+        OR pg_catalog.has_any_column_privilege('nexo_operador', t.oid, 'INSERT,UPDATE'))
+UNION ALL
+-- 28. Toda a escrita de nexo_gestao em tabelas de identidade tem política que exige o proprietário
+--     no contexto (excepto o registo de auditoria, que exige o autor = conta do contexto).
+SELECT 'politica_de_escrita_sem_proprietario', pol.tablename || '.' || pol.policyname
+  FROM pg_catalog.pg_policies pol
+ WHERE pol.schemaname = 'nexo' AND 'nexo_gestao' = ANY (pol.roles)
+   AND pol.cmd IN ('INSERT', 'UPDATE', 'DELETE')
+   AND pol.tablename IN ('empresas', 'filiais', 'utilizadores', 'utilizador_filiais')
+   AND coalesce(pol.qual, '') || coalesce(pol.with_check, '') NOT LIKE '%funcao_actual() = ''proprietario''%'
+UNION ALL
+-- 29. (0008) Contas criadas pelo registo público nascem pendentes: o trigger existe e está activo.
+SELECT 'registo_sem_activacao_pendente', t.relname
+  FROM tabelas t
+ WHERE t.relname = 'utilizadores'
+   AND NOT EXISTS (SELECT 1 FROM pg_catalog.pg_trigger g WHERE g.tgrelid = t.oid AND g.tgname = 'utilizadores_registo_pendente' AND g.tgenabled <> 'D')
 ORDER BY 1, 2;

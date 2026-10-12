@@ -19,6 +19,7 @@ test('termina os pedidos em curso, fecha a base depois do HTTP e sai com 0', asy
   const porta = (servidor.address() as AddressInfo).port
   const base: AcessoBase = {
     executarTransaccao: async () => null as never,
+    chamarIdentidade: async () => [],
     diagnosticar: async () => ({ disponivel: false, papelSeguro: null, versaoMigracao: null }),
     encerrar: async () => {
       ordem.push('base fechada')
@@ -48,7 +49,7 @@ test('se demorar demasiado, termina à força com código 1', async () => {
   fetch(`http://127.0.0.1:${porta}/`, { signal: controlo.signal }).catch(() => {})
   await new Promise((r) => setTimeout(r, 30))
   let codigo: number | undefined
-  const base: AcessoBase = { executarTransaccao: async () => null as never, diagnosticar: async () => ({ disponivel: false, papelSeguro: null, versaoMigracao: null }), encerrar: async () => {} }
+  const base: AcessoBase = { executarTransaccao: async () => null as never, chamarIdentidade: async () => [], diagnosticar: async () => ({ disponivel: false, papelSeguro: null, versaoMigracao: null }), encerrar: async () => {} }
   void criarEncerramento({ servidor, base, logger: criarLogger('silent'), sair: (c) => (codigo = c), tempoLimiteMs: 100 })('teste')
   await new Promise((r) => setTimeout(r, 250))
   assert.equal(codigo, 1)

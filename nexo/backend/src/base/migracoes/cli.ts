@@ -4,6 +4,10 @@
 //   npx tsx src/base/migracoes/cli.ts migrar --confirmo <alvo>     aplica as pendentes
 //   npx tsx src/base/migracoes/cli.ts verificar                    verificação do catálogo (H-01, R1)
 //   npx tsx src/base/migracoes/cli.ts senha-api --confirmo <alvo>  palavra-passe de nexo_api (NEXO_SENHA_API)
+//   npx tsx src/base/migracoes/cli.ts suporte-recuperacao --empresa <código> --utilizador <nome>
+//        --motivo "<como foi confirmada a identidade>" --confirmo <alvo>
+//        recuperação assistida pelo suporte: link de utilização única para um proprietário que
+//        perdeu o código E o e-mail (Etapa 3). Fora dos pedidos da API; fica auditado.
 //
 // O alvo é mostrado pelo comando estado. Em alternativa a --confirmo, a variável NEXO_CONFIRMO.
 // (No PowerShell, "npm run db:migrar -- --confirmo x" pode não passar --confirmo ao script:
@@ -19,6 +23,8 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import pg from 'pg'
 import { sanitizar } from '../../registo/sanitizar.js'
+import { gerarToken } from '../../autenticacao/tokens.js'
+import { linkRecuperacao } from '../../email/mensagens.js'
 import { aplicarMigracoes, estadoMigracoes, lerMigracoes, resumoScram } from './executor.js'
 
 const PASTA_MIGRACOES = join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..', 'migracoes')
@@ -161,8 +167,45 @@ async function main(): Promise<void> {
       await c.query(`ALTER ROLE nexo_api PASSWORD ${c.escapeLiteral(resumo)}`)
     })
     console.log('Palavra-passe de nexo_api definida (enviado só o resumo SCRAM-SHA-256).')
+  } else if (comando === 'suporte-recuperacao') {
+    exigirConfirmacao(alvo)
+    const empresa = argumento('empresa')
+    const utilizador = argumento('utilizador')
+    const motivo = argumento('motivo')
+    if (!empresa || !utilizador || !motivo) {
+      falhar('indique --empresa <código>, --utilizador <nome> e --motivo "<como foi confirmada a identidade e o vínculo>"')
+    }
+    const url = (process.env.NEXO_URL_APLICACAO ?? 'http://localhost:5173').replace(/\/+$/, '')
+    const horas = Number(process.env.NEXO_VALIDADE_SUPORTE_HORAS ?? 24)
+    if (!Number.isFinite(horas) || horas < 1 || horas > 48) falhar('NEXO_VALIDADE_SUPORTE_HORAS entre 1 e 48')
+    const { token, resumo } = gerarToken('email')
+    const r = await comCliente(alvo, async (c) => {
+      await c.query('BEGIN')
+      try {
+        // Só nexo_proprietario executa a função (e só o administrador das migrações o pode assumir).
+        await c.query('SET LOCAL ROLE nexo_proprietario')
+        const linhas = (
+          await c.query('SELECT utilizador_id, nome, empresa FROM nexo.suporte_emitir_recuperacao($1, $2, $3, $4::interval, $5)', [
+            empresa,
+            utilizador,
+            resumo,
+            `${horas} hours`,
+            motivo,
+          ])
+        ).rows
+        await c.query('COMMIT')
+        return linhas[0]
+      } catch (erro) {
+        await c.query('ROLLBACK').catch(() => {})
+        throw erro
+      }
+    })
+    console.log(`Proprietário: ${r.nome} — empresa: ${r.empresa}. Registo de auditoria criado (origem: suporte).`)
+    console.log('Link de recuperação (mostrado UMA vez; entregue-o só pelo canal confirmado, nunca por e-mail não verificado):')
+    console.log(`  ${linkRecuperacao(url, token)}`)
+    console.log(`Válido durante ${horas} h, uma única utilização. Pedir ao proprietário que registe um novo e-mail de recuperação.`)
   } else {
-    falhar('comando desconhecido: use estado, migrar, verificar ou senha-api')
+    falhar('comando desconhecido: use estado, migrar, verificar, senha-api ou suporte-recuperacao')
   }
 }
 

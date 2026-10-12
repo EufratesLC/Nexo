@@ -25,6 +25,24 @@ const esquema = z
     DATABASE_URL: z.string().optional(),
     DB_CA_CERT_FICHEIRO: z.string().optional(),
     DB_POOL_MAX: z.coerce.number().int().min(1).max(50).default(10),
+    // Sessões (Etapa 3). Propostas ajustáveis no piloto.
+    SESSAO_DURACAO_HORAS: z.coerce.number().min(1).max(24).default(12),
+    SESSAO_INACTIVIDADE_MINUTOS: z.coerce.number().int().min(5).max(1440).default(240),
+    SESSAO_COOKIE_SEGURO: z.enum(['sim', 'nao']).optional(),
+    // Proxies à frente da API (0 = nenhum). Necessário para os limites por IP atrás de um proxy.
+    NEXO_PROXIES_CONFIAVEIS: z.coerce.number().int().min(0).max(3).default(0),
+    // Endereço da aplicação web, usado nos links dos e-mails (confirmação e recuperação).
+    NEXO_URL_APLICACAO: z.string().default('http://localhost:5173'),
+    // Envio de e-mail: ficheiro (só desenvolvimento/teste: caixa de saída local), smtp ou desactivado.
+    EMAIL_TRANSPORTE: z.enum(['ficheiro', 'smtp', 'desactivado']).optional(),
+    EMAIL_PASTA: z.string().default('correio-dev'),
+    EMAIL_REMETENTE: z.string().optional(),
+    SMTP_SERVIDOR: z.string().optional(),
+    SMTP_PORTA: z.coerce.number().int().min(1).max(65535).default(587),
+    SMTP_TLS_IMPLICITO: z.enum(['sim', 'nao']).default('nao'),
+    SMTP_UTILIZADOR: z.string().optional(),
+    SMTP_SENHA: z.string().optional(),
+    SMTP_CA_FICHEIRO: z.string().optional(),
   })
   .superRefine((v, ctx) => {
     for (const origem of origensDe(v.CORS_ORIGENS)) {
@@ -36,6 +54,25 @@ const esquema = z
     if (v.DATABASE_URL) {
       const problema = problemaDaLigacao(v.DATABASE_URL, v.DB_CA_CERT_FICHEIRO, v.NEXO_AMBIENTE)
       if (problema) ctx.addIssue({ code: 'custom', path: ['DATABASE_URL'], message: problema })
+    }
+    if (v.SESSAO_INACTIVIDADE_MINUTOS > v.SESSAO_DURACAO_HORAS * 60) {
+      ctx.addIssue({ code: 'custom', path: ['SESSAO_INACTIVIDADE_MINUTOS'], message: 'não pode exceder a duração da sessão' })
+    }
+    if (!urlValido(v.NEXO_URL_APLICACAO)) {
+      ctx.addIssue({ code: 'custom', path: ['NEXO_URL_APLICACAO'], message: 'tem de ser um URL http(s)' })
+    }
+    if (v.NEXO_AMBIENTE === 'producao') {
+      if (v.SESSAO_COOKIE_SEGURO === 'nao') ctx.addIssue({ code: 'custom', path: ['SESSAO_COOKIE_SEGURO'], message: 'em produção o cookie é sempre Secure' })
+      if (!v.NEXO_URL_APLICACAO.startsWith('https://')) ctx.addIssue({ code: 'custom', path: ['NEXO_URL_APLICACAO'], message: 'em produção tem de ser https://' })
+      if ((v.EMAIL_TRANSPORTE ?? 'smtp') !== 'smtp') ctx.addIssue({ code: 'custom', path: ['EMAIL_TRANSPORTE'], message: 'em produção só smtp (a recuperação do proprietário depende do e-mail)' })
+    }
+    if ((v.EMAIL_TRANSPORTE ?? transportePorOmissao(v.NEXO_AMBIENTE)) === 'smtp') {
+      for (const nome of ['SMTP_SERVIDOR', 'EMAIL_REMETENTE'] as const) {
+        if (!v[nome]) ctx.addIssue({ code: 'custom', path: [nome], message: 'obrigatória com EMAIL_TRANSPORTE=smtp' })
+      }
+      if (Boolean(v.SMTP_UTILIZADOR) !== Boolean(v.SMTP_SENHA)) {
+        ctx.addIssue({ code: 'custom', path: ['SMTP_SENHA'], message: 'SMTP_UTILIZADOR e SMTP_SENHA vêm juntos' })
+      }
     }
   })
 
@@ -49,6 +86,27 @@ export interface ConfiguracaoBase {
   descricao: string
 }
 
+export interface ConfiguracaoSessao {
+  duracaoMs: number
+  inactividadeMs: number
+  /** Cookie com Secure (e prefixo __Host-). Sempre em produção; em desenvolvimento por http, não. */
+  cookieSeguro: boolean
+}
+
+export type ConfiguracaoEmail =
+  | { transporte: 'desactivado' }
+  | { transporte: 'ficheiro'; pasta: string }
+  | {
+      transporte: 'smtp'
+      remetente: string
+      servidor: string
+      porta: number
+      tlsImplicito: boolean
+      /** Nunca registar. */
+      autenticacao: { utilizador: string; senha: string } | null
+      ca: string | null
+    }
+
 export interface Configuracao {
   ambiente: Ambiente
   porta: number
@@ -57,6 +115,11 @@ export interface Configuracao {
   base: ConfiguracaoBase | null
   /** A rota da prova técnica de assinatura (Etapa 1) só existe em desenvolvimento. */
   provaAssinaturaActiva: boolean
+  sessao: ConfiguracaoSessao
+  proxiesConfiaveis: number
+  /** Base dos links enviados por e-mail (sem barra final). */
+  urlAplicacao: string
+  email: ConfiguracaoEmail
 }
 
 export class ErroConfiguracao extends Error {}
@@ -76,6 +139,41 @@ export function lerConfiguracao(env: NodeJS.ProcessEnv = process.env): Configura
     nivelLog: v.LOG_NIVEL,
     base: v.DATABASE_URL ? configuracaoBase(v.DATABASE_URL, v.DB_CA_CERT_FICHEIRO, v.DB_POOL_MAX) : null,
     provaAssinaturaActiva: v.NEXO_AMBIENTE === 'desenvolvimento',
+    sessao: {
+      duracaoMs: v.SESSAO_DURACAO_HORAS * 3_600_000,
+      inactividadeMs: v.SESSAO_INACTIVIDADE_MINUTOS * 60_000,
+      cookieSeguro: v.NEXO_AMBIENTE === 'producao' || v.SESSAO_COOKIE_SEGURO === 'sim',
+    },
+    proxiesConfiaveis: v.NEXO_PROXIES_CONFIAVEIS,
+    urlAplicacao: v.NEXO_URL_APLICACAO.replace(/\/+$/, ''),
+    email: configuracaoEmail(v),
+  }
+}
+
+function transportePorOmissao(ambiente: Ambiente): 'ficheiro' | 'smtp' {
+  return ambiente === 'producao' ? 'smtp' : 'ficheiro'
+}
+
+function configuracaoEmail(v: z.infer<typeof esquema>): ConfiguracaoEmail {
+  const transporte = v.EMAIL_TRANSPORTE ?? transportePorOmissao(v.NEXO_AMBIENTE)
+  if (transporte === 'desactivado') return { transporte }
+  if (transporte === 'ficheiro') return { transporte, pasta: v.EMAIL_PASTA }
+  let ca: string | null = null
+  if (v.SMTP_CA_FICHEIRO) {
+    try {
+      ca = readFileSync(v.SMTP_CA_FICHEIRO, 'utf8')
+    } catch {
+      throw new ErroConfiguracao('Configuração inválida:\n- SMTP_CA_FICHEIRO: não foi possível ler o ficheiro indicado')
+    }
+  }
+  return {
+    transporte,
+    remetente: v.EMAIL_REMETENTE as string,
+    servidor: v.SMTP_SERVIDOR as string,
+    porta: v.SMTP_PORTA,
+    tlsImplicito: v.SMTP_TLS_IMPLICITO === 'sim',
+    autenticacao: v.SMTP_UTILIZADOR && v.SMTP_SENHA ? { utilizador: v.SMTP_UTILIZADOR, senha: v.SMTP_SENHA } : null,
+    ca,
   }
 }
 

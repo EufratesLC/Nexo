@@ -735,3 +735,11 @@ powershell -ExecutionPolicy Bypass -File scripts\arranque-limpo.ps1 -ComBase
 | Commit no GitHub | Pendente | — (C) |
 | Fecho do terminal com `tsx watch` | Pendente (causa não confirmada) | Secção 17 |
 | HTTPS e testes em telemóvel | Pendente (etapa futura) | `docs/Nexo_Ambientes.md`, secção 5 |
+
+---
+
+## 20. Início da Etapa 3 com a Etapa 2 por fechar (08/10/2026)
+
+O proprietário do projecto **autorizou o início da Etapa 3** a 08/10/2026. A infraestrutura da Etapa 2 está guardada no commit `3bf9334`.
+
+**A Etapa 2 continua formalmente não concluída.** O requisito de fecho da secção 18.1 mantém-se pendente: outro programador, noutro computador, arranca aplicação, API e base de dados seguindo o guia. A autorização não o substitui nem o dá por cumprido. A Etapa 3 está em `docs/Nexo_Entrega_Etapa_3.md`.

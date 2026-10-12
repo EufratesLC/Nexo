@@ -1,14 +1,25 @@
 # Nexo — Arquitectura da Etapa 1
 
-Versão 0.5 · 3 de Outubro de 2026 · Estado: **proposta para validação — não aprovada no seu conjunto.** Só **H-01** está aprovada (02/10/2026, secções 3 e 19.7)
+Versão 0.6 · 8 de Outubro de 2026 · Estado: **proposta para validação — não aprovada no seu conjunto.** Estão aprovadas **H-01** (02/10/2026, secções 3 e 19.7) e **H-02**, com as decisões de autenticação e recuperação do proprietário (08/10/2026, secção 3.8)
 
-Base: `docs/Nexo_Especificacao_Etapa_0.md`, versão 0.5. A especificação continua em validação: **nenhuma sugestão ou decisão em aberto é tratada aqui como aprovada**. Onde este documento escolhe uma opção, marca-a como **proposta** e indica a decisão de que depende (H-xx).
+Base: `docs/Nexo_Especificacao_Etapa_0.md`, versão 0.6. A especificação continua em validação: **nenhuma sugestão ou decisão em aberto é tratada aqui como aprovada**. Onde este documento escolhe uma opção, marca-a como **proposta** e indica a decisão de que depende (H-xx).
 
 Este documento propõe o modelo de dados e os contratos. **Não foram criadas migrações definitivas** nem executada nenhuma migração numa base real. O teste de isolamento da secção 19 foi **executado num projecto Supabase de desenvolvimento** a 02/10/2026 (22/22). Cobre um esquema mínimo, não o modelo completo nem a API.
 
-Versões anteriores: `docs/versoes/Nexo_Arquitectura_Etapa_1_v0.1.md`, `docs/versoes/Nexo_Arquitectura_Etapa_1_v0.2.md`, `docs/versoes/Nexo_Arquitectura_Etapa_1_v0.3.md`, `docs/versoes/Nexo_Arquitectura_Etapa_1_v0.4.md`.
+Versões anteriores: `docs/versoes/Nexo_Arquitectura_Etapa_1_v0.1.md`, `docs/versoes/Nexo_Arquitectura_Etapa_1_v0.2.md`, `docs/versoes/Nexo_Arquitectura_Etapa_1_v0.3.md`, `docs/versoes/Nexo_Arquitectura_Etapa_1_v0.4.md`, `docs/versoes/Nexo_Arquitectura_Etapa_1_v0.5.md`.
 
 ---
+
+## Alterações da versão 0.6 (Etapa 3: autenticação e empresas)
+
+Regista as decisões de 08/10/2026 (especificação 0.6) e o que a Etapa 3 implementou. Detalhe e testes: `docs/Nexo_Entrega_Etapa_3.md`. **Não aprova nenhuma outra proposta.**
+
+| # | O que mudou | Onde |
+|---|---|---|
+| 1 | **Sem Supabase Auth.** Os funcionários não têm e-mail (H-02) e o login do Supabase Auth exige e-mail ou telefone. A autenticação passa a ser da própria API: código da empresa + nome de utilizador + código secreto, sessão num cookie HttpOnly, validada na base em cada pedido | 1, 2.1, **3.8**, 6.1 |
+| 2 | `nexo_autenticacao` criado já na Etapa 3 (migração 0005). Passa a ser dono das funções de identidade que correm antes do contexto. Na Etapa 7 será também dono de `autenticar_registo` | 3.1, 3.8 |
+| 3 | `utilizadores` passa a ser a conta **por empresa**, com a função (junta "utilizador" e "membro"). Tabelas novas: `utilizador_filiais`, `credenciais_acesso`, `sessoes`, `contactos_recuperacao`, `tokens_email`, `registo_auditoria`. `convites` sai do modelo | 4.3 |
+| 4 | Recursos da API da Etapa 3: `/autenticacao/*`, `/empresa`, `/filiais/{id}`, `/utilizadores/*`, `/auditoria` | 6.2 |
 
 ## Alterações da versão 0.5 (implementação da Etapa 2)
 
@@ -94,7 +105,6 @@ flowchart LR
   subgraph Mobile["App mobile (futuro)"]
     RN["React Native + Expo"] --- SQL[("Base local")]
   end
-  AUTH["Supabase Auth"]
   subgraph API["API Node.js + Express"]
     MW["Autenticação e contexto"]
     MOD["Módulos: empresas, produtos, stock,<br/>compras, vendas, caixa, relatórios"]
@@ -102,9 +112,7 @@ flowchart LR
   end
   DB[("PostgreSQL (Supabase)<br/>políticas de acesso por empresa")]
 
-  UI -- "palavra-passe" --> AUTH
-  AUTH -- "JWT do utilizador" --> UI
-  UI -- "HTTPS + JWT: gestão e leituras" --> MW
+  UI -- "HTTPS + cookie de sessão HttpOnly (0.6):<br/>login, gestão e leituras" --> MW
   IDB -- "HTTPS + credencial do dispositivo:<br/>operações com autoria (Etapa 7)" --> SYNC
   RN -.-> MW
   MW --> MOD
@@ -114,9 +122,9 @@ flowchart LR
 
 Princípios que orientam as escolhas:
 
-1. A web e a app mobile **só falam com a API**. O Supabase é usado directamente apenas para autenticação (H-01, aprovada em 02/10/2026; especificação D.15.4).
+1. A web e a app mobile **só falam com a API**, incluindo para a autenticação (0.6: sem Supabase Auth; secção 3.8). O Supabase é só a base de dados.
 2. Há **dois caminhos de escrita**:
-   - **Gestão** (produtos, compras, contagens, utilizadores, relatórios): pedidos REST online, com o JWT do utilizador.
+   - **Gestão** (produtos, compras, contagens, utilizadores, relatórios): pedidos REST online, com a sessão do utilizador (0.6: cookie HttpOnly; antes, JWT).
    - **Balcão** (vendas, pagamentos, cancelamentos, movimentos de caixa): **operações** no formato da secção 7, aplicadas no servidor por uma única função de aplicação. Proposta: na Etapa 6 as operações chegam online com o JWT; na Etapa 7 passam também a chegar pelo canal do dispositivo (secção 17, proposta P-1).
 3. O servidor é a fonte de verdade. O dispositivo guarda uma cópia de referência e a sua fila de operações.
 
@@ -124,30 +132,33 @@ Princípios que orientam as escolhas:
 
 ## 2. Comunicação web → API → base de dados
 
-### 2.1 Pedidos de utilizador (online)
+### 2.1 Pedidos de utilizador (online) — revisto na 0.6
 
 ```mermaid
 sequenceDiagram
   participant W as Web
-  participant A as Supabase Auth
   participant P as API
   participant D as PostgreSQL
-  W->>A: e-mail/telefone + palavra-passe
-  A-->>W: JWT de acesso (curta duração) + token de renovação
-  W->>P: GET /v1/produtos (Authorization: Bearer JWT, X-Nexo-Empresa)
-  P->>P: verifica o JWT; obtém o membro e a função
+  W->>P: POST /v1/autenticacao/entrar (código da empresa, utilizador, código secreto)
+  P->>D: nexo.parametros_acesso(…) → parâmetros e sal (nunca o resumo)
+  P->>P: scrypt do código introduzido
+  P->>D: nexo.iniciar_sessao(…, resumo calculado, SHA-256 do token novo)
+  D-->>P: ok + ids (a base compara o resumo)
+  P-->>W: 200 + Set-Cookie (token de 256 bits, HttpOnly, SameSite=Strict)
+  W->>P: GET /v1/utilizadores (cookie; X-Nexo-Cliente nas escritas)
+  P->>D: nexo.validar_sessao(SHA-256 do token) → empresa, conta, função, filiais
+  P->>P: autorização por função (matriz B) antes de tocar na base
   P->>D: BEGIN; SET LOCAL ROLE nexo_operador | nexo_gestao;<br/>nexo.definir_contexto(…)
-  P->>D: SELECT … (privilégios do papel + políticas por empresa)
-  D-->>P: linhas só da empresa, sem colunas de custo para o operador
+  P->>D: SELECT … (privilégios do papel + políticas por empresa e por função)
   P->>D: COMMIT
-  P-->>W: 200 JSON (esquema de resposta da função)
+  P-->>W: 200 JSON
 ```
 
-1. A API verifica o JWT e obtém o `utilizador_id`.
-2. O cabeçalho `X-Nexo-Empresa` indica a empresa pretendida. A API **só aceita** a empresa se existir um **membro activo** (utilizador, empresa). É daí que obtém a função e as filiais permitidas (D.15.1). Nunca aceita a empresa só porque o cliente a indicou.
-3. **A função escolhe o papel da base de dados**: operador → `nexo_operador`; proprietário ou gestor → `nexo_gestao` (secção 3.1). A escolha vem do membro guardado na base, nunca do pedido.
+1. A API valida o token **na base** em cada pedido (`nexo.validar_sessao`): sessão não revogada, não expirada, sem inactividade excessiva e conta activa. A base devolve a empresa, a conta, a função e as filiais permitidas.
+2. A empresa e a função vêm **só** dessa resposta. Um `X-Nexo-Empresa` diferente da sessão é recusado (`403 empresa_nao_permitida`). `X-Nexo-Filial` só pode escolher uma filial permitida (`403 filial_nao_permitida`).
+3. **A função escolhe o papel da base de dados**: operador → `nexo_operador`; proprietário ou gestor → `nexo_gestao` (secção 3.1).
 4. A autorização por função (matriz B) é verificada na API **antes** de tocar na base.
-5. Cada pedido corre numa transacção com o contexto definido (3.2). Os privilégios do papel e as políticas por empresa são a segunda e a terceira barreira.
+5. Cada pedido corre numa transacção com o contexto definido (3.2). Os privilégios do papel e as políticas são a segunda e a terceira barreira. As políticas de escrita de identidade exigem também a função de proprietário no contexto.
 
 ### 2.2 Sincronização (dispositivo, Etapa 7)
 
@@ -176,7 +187,7 @@ A decisão aprova o princípio: papéis próprios sem BYPASSRLS, contexto local 
 | `nexo_operador` | Não | Não | Pedidos online de membros com função **operador**. **Sem nenhum privilégio nas tabelas de custo** (3.7) |
 | `nexo_gestao` | Não | Não | Pedidos online de **proprietário e gestor**. As diferenças entre os dois (configuração, funções, contas) verificam-se na API e, nas tabelas administrativas, por política com `nexo.funcao` |
 | `nexo_sincronizacao` | Não | Não | Aplicação de operações de balcão (secção 8) |
-| `nexo_autenticacao` | Não, e **sem membros** | Não | Dono da função `nexo.autenticar_registo` (3.4). Ninguém pode assumir este papel. **Ainda não criado:** entra com a função, na Etapa 7 |
+| `nexo_autenticacao` | Não, e **sem membros** | Não | **(0.6) Criado na migração 0005.** Dono das funções de identidade que correm antes do contexto (3.8) e, na Etapa 7, de `nexo.autenticar_registo` (3.4). Ninguém pode assumir este papel |
 | `nexo_diagnostico` (0.5) | Não | Não | Dono da função `nexo.estado_base()`, que dá à API a versão das migrações sem acesso à tabela de controlo. Criado na migração 0001 |
 | `service_role`, `postgres` (Supabase) | — | **Sim** | **Não usados** em pedidos nem na sincronização. Só em tarefas administrativas explícitas, auditadas e fora do caminho dos pedidos |
 
@@ -202,7 +213,7 @@ COMMIT;
 
 - `SET LOCAL` e `set_config(…, true)` valem só dentro da transacção. Isto é compatível com o *pooler* do Supabase em modo transacção. **Nunca** se usa `SET` de sessão.
 - **Defesa contra fugas no pool:** se algum código definir por erro um valor ao nível da sessão, esse valor pode passar para a transacção de outro cliente na mesma ligação do pool. A marca não corresponde ao início dessa transacção, e as políticas negam tudo (testes T05, T20 e P02).
-- Os valores vêm **só** do JWT verificado (e do membro) ou da credencial e da autoria verificadas. Um único *middleware* define-os; nenhum módulo os pode alterar.
+- Os valores vêm **só** da sessão validada pela base (0.6; antes: JWT verificado e membro) ou da credencial e da autoria verificadas. Um único *middleware* define-os; nenhum módulo os pode alterar.
 - Se o contexto faltar, as funções devolvem `NULL` e as políticas **negam tudo** (T04).
 
 ### 3.3 Políticas (exemplos ilustrativos)
@@ -291,10 +302,40 @@ O segredo tem pelo menos 256 bits aleatórios e só o seu resumo SHA-256 é guar
 
 **Alternativa considerada para H-01:** chamar a base pelo PostgREST com o JWT do utilizador, de modo que as políticas usem `auth.uid()` verificado pela própria base. Isto é mais forte nas leituras online, porque a API não consegue forjar o contexto sem o segredo do JWT. Mas as escritas atómicas em várias tabelas exigiriam funções RPC, e a sincronização não tem JWT de utilizador. **Proposta:** ligação directa com papéis e contexto por transacção nos dois caminhos, e testes automáticos de isolamento em cada módulo. **H-01 aprovada em 02/10/2026 com esta opção**; o PostgREST com RPC fica registado como considerado e não adoptado.
 
+### 3.8 Autenticação de utilizadores antes do contexto (0.6, Etapa 3)
+
+**Problema.** O login e a validação da sessão acontecem antes de se conhecer a empresa, e todas as tabelas têm `FORCE ROW LEVEL SECURITY`. A solução segue o mesmo padrão de 3.4: funções `SECURITY DEFINER` com o dono dedicado `nexo_autenticacao` e políticas explícitas para esse dono. Não há leitura genérica de credenciais e o RLS nunca é desligado.
+
+| Função (0007) | Executa | Devolve |
+|---|---|---|
+| `parametros_acesso(empresa, utilizador)` | `nexo_api` | Parâmetros e sal do scrypt. **Nunca o resumo** |
+| `iniciar_sessao(empresa, utilizador, resumo, resumo_token, duração, inactividade)` | `nexo_api` | `ok` / `invalido` / `desactivado` e ids. "desactivado" só depois de o resumo estar certo |
+| `validar_sessao(resumo_token)` | `nexo_api` | Sessão, empresa, conta, função, nome, filiais permitidas |
+| `terminar_sessao`, `registar_empresa`, `confirmar_email`, `pedir_recuperacao`, `concluir_recuperacao`, `reenviar_activacao`, `corrigir_email_activacao` | `nexo_api` | O mínimo de cada operação. Desde a 0008: as contas do registo nascem **pendentes** (trigger); `iniciar_sessao` devolve `pendente` sem criar sessão; `confirmar_email` activa a conta |
+| `parametros_acesso_proprios`, `alterar_codigo_proprio` | operador, gestão | Só a própria conta (contexto) |
+| `definir_codigo`, `revogar_sessoes`, `definir_email_recuperacao`, `reenviar_confirmacao_email` | gestão | Exigem o proprietário **confirmado na base**, não só no contexto |
+| `suporte_emitir_recuperacao` | `nexo_proprietario` (só o administrador das migrações) | Recuperação assistida, fora dos pedidos |
+
+Propriedades:
+
+- **O resumo do código secreto nunca sai da base.** A API calcula o scrypt do código introduzido com os parâmetros e o sal, e a função compara-o. Uma API comprometida pode tentar códigos *online*, como qualquer cliente, mas não obtém resumos para atacar *offline*.
+- **Tokens só como SHA-256.** Os de sessão vão no cookie; os dos links de e-mail vão no fragmento `#`, que o navegador não envia ao servidor.
+- **Os papéis de execução não têm nenhum privilégio** em `credenciais_acesso`, `sessoes` e `tokens_email` (verificação do catálogo, regra 21).
+- **A matriz de quem executa cada função é verificada** no catálogo (regra 25).
+- **`ContextoVerificado` só a partir de `SessaoValidada`**, que só o serviço de identidade cria com a resposta de `validar_sessao`. Um teste estático o garante.
+- **Algoritmo:** scrypt N=2^15, r=8, p=3 (32 MiB), sal de 16 bytes, resumo de 32 bytes. Os parâmetros são guardados com cada resumo, para poderem subir. Cerca de 0,5 s por cálculo no computador de desenvolvimento.
+- **Sessões:** proposta de 12 h no máximo e 4 h de inactividade. Revogadas ao sair, ao desactivar a conta, ao redefinir o código e na recuperação. Alterar o próprio código revoga as outras sessões.
+- **Tentativas repetidas:** limites em memória, por IP e por conta (para todas as contas, existam ou não). A resposta não revela se a conta existe. Num só processo, sem partilha entre instâncias (limitação; ver a entrega da Etapa 3).
+
+**Alternativas não adoptadas:**
+
+- **Supabase Auth:** exige e-mail ou telefone. Para os funcionários (H-02) teria de se inventar endereços ou usar a API administrativa com `service_role` na API, o que contraria H-01.
+- **Devolver o resumo à API para comparar lá:** expunha os resumos a quem controlasse a ligação `nexo_api`.
+
 ### 3.6 Preparação para filiais
 
 - Todas as tabelas de coisas que acontecem num local têm `filial_id`, e as chaves compostas incluem-no quando é relevante (saldos, sessões, contagens).
-- `membro_filiais` indica em que filiais cada membro trabalha. No piloto há uma filial e todos os membros a têm.
+- `utilizador_filiais` (0.6; antes `membro_filiais`) indica em que filiais cada conta trabalha; o proprietário tem todas. No piloto há uma filial e todos os membros a têm.
 - As políticas podem ganhar um filtro de filial (`filial_id = ANY(nexo.filiais_permitidas())`) sem mudar o esquema.
 - Os códigos (`F01`, `C01`) são únicos por filial. O número do comprovativo já inclui a filial.
 
@@ -489,9 +530,12 @@ Colunas comuns omitidas: `empresa_id`, `criado_em`, `criado_por`. "UK" = restri�
 |---|---|---|---|
 | `empresas` | id, nome, nuit, tipo, moeda, fuso, regras (jsonb versionado) | `CHECK (tipo = 'loja')` no MVP | — |
 | `filiais` | id, nome, codigo, proximo_numero_registo | UK (empresa_id, codigo) | — |
-| `utilizadores` | id (= `auth.users.id`), nome, contacto | — | — |
-| `membros` | id, utilizador_id, funcao, verificador_pin, estado | UK (empresa_id, utilizador_id); `CHECK funcao IN (…)`; *trigger*: pelo menos um proprietário activo (D.1.3) | (utilizador_id) |
-| `membro_filiais` | membro_id, filial_id | PK (membro_id, filial_id); FK | — |
+| `utilizadores` **(0.6)** | id, nome_utilizador, nome, funcao, estado, criado_por, desactivado_em | UK (empresa_id, nome_utilizador); `CHECK funcao IN (…)`; *trigger*: pelo menos um proprietário activo (D.1.3), com bloqueio por empresa. Conta **por empresa** (H-02); o verificador do PIN entra na Etapa 7 | — |
+| `utilizador_filiais` **(0.6)** | utilizador_id, filial_id | PK (empresa_id, utilizador_id, filial_id); FK compostas | — |
+| `credenciais_acesso` **(0.6)** | utilizador_id, algoritmo, parametros, sal, resumo, versao, origem | PK (empresa_id, utilizador_id). Só `nexo_autenticacao` | — |
+| `sessoes` **(0.6)** | id, utilizador_id, resumo_token, expira_em, inactividade, ultimo_uso_em, revogada_em, motivo | UK (resumo_token). Só `nexo_autenticacao` | (empresa_id, utilizador_id) activas |
+| `contactos_recuperacao` **(0.6)** | utilizador_id, email (confirmado), email_pendente | Só proprietários; a gestão lê só a própria linha | — |
+| `tokens_email` **(0.6)** | finalidade, origem (email/suporte), resumo_token, email, expira_em, usado_em, invalidado_em | UK (resumo_token). Só `nexo_autenticacao` | — |
 | `versoes_permissoes` | numero, conteudo (jsonb), publicada_em | PK (empresa_id, numero) | — |
 | `registos_dispositivo` | id, filial_id, codigo, nome, credencial_hash, estado, substitui_id, revogado_em, suspenso_em, ultima_sequencia, versao_permissoes_confirmada, sequencia_confirmacao | UK (filial_id, codigo); UK (credencial_hash). O código vem de `filiais.proximo_numero_registo` e **nunca é reutilizado** (D.5.3) | (empresa_id, filial_id, estado) |
 | `contactos_dispositivo` | registo_id, hora_servidor, sequencia_declarada, pendentes_numero, pendentes_valor, desvio_relogio_ms, versao_app | FK registo | (registo_id, hora_servidor DESC); base de T_antes (D.10.3) |
@@ -618,7 +662,7 @@ A separação permite, por exemplo, que um novo catálogo substitua a loja `cata
 ### 6.1 Convenções
 
 - Base `https://<api>/api/v1` (0.5), JSON UTF-8, datas ISO 8601 em UTC, dinheiro em **centavos inteiros**, quantidades como texto decimal (`"1.250"`) para não perder precisão.
-- Autenticação: `Authorization: Bearer <JWT>` + `X-Nexo-Empresa: <uuid>` (utilizador), ou `Authorization: Nexo-Dispositivo <segredo>` (sincronização).
+- Autenticação (0.6): cookie de sessão HttpOnly (utilizador). `X-Nexo-Empresa` e `X-Nexo-Filial` são opcionais e só confirmam ou escolhem dentro da sessão. Pedidos que alteram dados levam `X-Nexo-Cliente: web`. A sincronização continua com `Authorization: Nexo-Dispositivo <segredo>`.
 - **Respostas por função:** cada rota tem esquemas de resposta por função (3.7.2). O operador nunca recebe custos.
 - Escritas online não repetíveis levam `Idempotency-Key: <uuid>`. A mesma chave com o mesmo pedido devolve a resposta guardada, com `"repeticao": true`. Com um pedido diferente devolve `409 idempotencia_conflito`.
 - Erros sempre no formato:
@@ -630,8 +674,9 @@ A separação permite, por exemplo, que um novo catálogo substitua a loja `cata
 | HTTP | Código de erro (exemplos) |
 |---|---|
 | 400 | `pedido_invalido`, `validacao` (com `detalhes.campos`) |
-| 401 | `nao_autenticado`, `credencial_desconhecida` |
-| 403 | `permissao_negada`, `empresa_nao_permitida`, `registo_revogado` |
+| 401 | `nao_autenticado`, `sessao_terminada`, `credenciais_invalidas`, `credencial_desconhecida` |
+| 403 | `permissao_negada`, `empresa_nao_permitida`, `filial_nao_permitida`, `conta_desactivada`, `propria_conta`, `pedido_nao_confiavel`, `registo_revogado` |
+| 429 | `demasiadas_tentativas` (com `Retry-After`) |
 | 404 | `nao_encontrado` (também para recursos de outra empresa: nunca se revela que existem) |
 | 409 | `idempotencia_conflito`, `estado_invalido` (ex.: confirmar recepção cancelada; decidir um conflito já decidido), `pausa_activa` |
 | 422 | `regra_negocio` (ex.: pagamentos ≠ total) |
@@ -641,9 +686,14 @@ A separação permite, por exemplo, que um novo catálogo substitua a loja `cata
 
 | Método e rota | Quem | Descrição |
 |---|---|---|
-| `POST /v1/empresas` | Utilizador autenticado sem empresa | Cria empresa, filial `F01`, métodos de pagamento e o membro proprietário (C.1) |
-| `GET /v1/eu` | Utilizador | Membros, empresas, função, filiais |
-| `POST /v1/convites` · `POST /v1/convites/{id}/aceitar` | P/G · convidado | Convites (B.1) |
+| `POST /v1/autenticacao/registo` **(0.6)** | Público | Cria empresa, filial `F01` e a conta do proprietário **pendente**, **sem sessão**; a conta fica activa com a confirmação do e-mail (C.1). Reenvio e correcção do e-mail: `POST /v1/autenticacao/activacao/reenviar` · `/activacao/email`. Os métodos de pagamento ficam para a etapa respectiva |
+| `POST /v1/autenticacao/entrar` · `/sair` · `GET /sessao` **(0.6)** | Público · com sessão | Login, saída, sessão actual |
+| `POST /v1/autenticacao/codigo` **(0.6)** | Todos | Alterar o próprio código (exige o actual) |
+| `POST /v1/autenticacao/email` · `/email/reenviar` · `/email/confirmar` **(0.6)** | P · P · público | E-mail de recuperação |
+| `POST /v1/autenticacao/recuperacao` · `/recuperacao/concluir` **(0.6)** | Público | Recuperação do proprietário (C.1.4) |
+| `GET /v1/empresa` · `PATCH /v1/empresa` · `PATCH /v1/filiais/{id}` **(0.6)** | Todos · P · P | Empresa e filial |
+| `GET/POST /v1/utilizadores`, `GET/PATCH /v1/utilizadores/{id}`, `POST …/desactivar` · `…/reactivar`, `PUT …/codigo` **(0.6)** | P | Contas (H-02); nunca a própria |
+| `GET /v1/auditoria` **(0.6)** | P | Actos administrativos |
 | `POST /v1/dispositivos` | P/G | Prepara um registo novo e devolve a credencial **uma única vez** |
 | `POST /v1/dispositivos/{id}/revogar` · `/suspender` | P/G | D.11.6 |
 | `POST /v1/dispositivos/{id}/autorias` | Utilizador no dispositivo | Regista a autoria (chave pública ou sessão local) — **depende de H-23** |
@@ -1000,7 +1050,7 @@ Os pedidos com `Idempotency-Key` guardam em `pedidos_idempotentes` (chave, resum
 | # | Decisão | Proposta | Estado depois da revisão |
 |---|---|---|---|
 | H-01 | Acesso da API à base e políticas | Papéis `nexo_operador`, `nexo_gestao` e `nexo_sincronizacao`, contexto por transacção com marca, sem credencial de serviço nos pedidos | **Aprovada** pelo proprietário do projecto em 02/10/2026, com os requisitos de 19.7. Teste no Supabase de desenvolvimento: 22/22, zero fugas |
-| H-02 | Identidade dos operadores | Conta própria no Supabase Auth | Depende da entrevista. Bloqueia a Etapa 3 |
+| H-02 | Identidade dos operadores | Conta própria no Supabase Auth | **Aprovada em 08/10/2026 com outra opção (0.6):** contas por empresa criadas pelo proprietário, sem e-mail; autenticação da própria API (3.8) |
 | H-04 / H-21 | Custo médio e ordem de aplicação | Como na especificação | Modelo de tabelas revisto (4.3). Bloqueia a Etapa 4 |
 | H-23 | Autoria por assinatura | **Sem recomendação automática** | **Pendente.** Proposta de classificação: bloqueia a Etapa 7, não a Etapa 2 (secção 18) |
 

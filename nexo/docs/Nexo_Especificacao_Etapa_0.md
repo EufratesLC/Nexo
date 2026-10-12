@@ -1,6 +1,6 @@
 # Nexo — Especificação da Etapa 0 (MVP para lojas)
 
-Versão 0.5 · 2 de Outubro de 2026 · Estado: **base de trabalho em validação — Etapa 0 não concluída**
+Versão 0.6 · 8 de Outubro de 2026 · Estado: **base de trabalho em validação — Etapa 0 não concluída**
 
 Documentos de referência: `Documentos/NEXO_Plano_Plataforma_Gestao_Comercial_Financeira.docx`, `Documentos/Nexo_Etapas_de_Desenvolvimento.docx`, `Documentos/Nexo_Estrutura_Web_Mobile_API.docx`. Versões anteriores: `docs/versoes/`.
 
@@ -10,11 +10,12 @@ Documentos de referência: `Documentos/NEXO_Plano_Plataforma_Gestao_Comercial_Fi
 
 A Etapa 0 **não está concluída**:
 
-- Continuam abertas quatro das cinco decisões que **bloqueiam a arquitectura** (H.1). **H-01 foi aprovada** em 02/10/2026.
+- Continuam abertas três das cinco decisões que **bloqueiam a arquitectura** (H.1). **H-01 foi aprovada** em 02/10/2026 e **H-02** em 08/10/2026.
 - A entrevista à loja piloto ainda não foi feita.
 - As escolhas que dependem da loja continuam a ser **propostas**, não decisões aprovadas: janela offline de 72 horas (H-03), crédito (H-07), embalagens (H-10), gaveta partilhada (H-13) e a duração das pausas de contagem (H-24), entre outras.
 - A versão 0.4 resulta da revisão da Etapa 1. Corrige regras; não aprova decisões.
 - A versão 0.5 regista **só** a aprovação de H-01. As restantes propostas continuam em aberto.
+- A versão 0.6 regista **só** as decisões do proprietário do projecto de 08/10/2026 para a Etapa 3: H-02 (acesso dos funcionários), autenticação e recuperação do proprietário, e registo público de empresas.
 
 ## Histórico de versões
 
@@ -25,6 +26,20 @@ A Etapa 0 **não está concluída**:
 | 0.3 | Revisão focada do MVP sobre a 0.2. |
 | 0.4 | Correcções da revisão da Etapa 1 (abaixo): custo efectivo com as correcções de compra, retoma da contagem só pelo servidor, custos fora do alcance do operador, H-23 sem resolução implícita. |
 | 0.5 | Registo da decisão H-01, aprovada pelo proprietário do projecto em 02/10/2026 (abaixo). |
+| 0.6 | Registo das decisões de 08/10/2026: H-02, autenticação e recuperação do proprietário, registo público (abaixo). |
+
+## Alterações da versão 0.6
+
+Decisões do proprietário do projecto de 08/10/2026, tomadas para a Etapa 3. **Não aprovam nenhuma outra proposta em aberto.** Implementação: `docs/Nexo_Entrega_Etapa_3.md`.
+
+| # | Tema | O que mudou | Onde |
+|---|---|---|---|
+| 1 | **H-02 aprovada [D]** | Os funcionários não precisam de e-mail. Entram com **código da empresa + nome de utilizador + código secreto de acesso**. A conta é criada pelo proprietário, que lhes dá o código que vão usar. Não há código temporário nem mudança obrigatória no primeiro acesso. O código secreto funciona como palavra-passe: não é um identificador público nem um PIN numérico curto | H.1, A.3, B.1, C.1.2, E.1, F.2 |
+| 2 | **Autenticação do proprietário [D]** | O proprietário entra pelo mesmo mecanismo (código da empresa + nome de utilizador + código secreto) | C.1 |
+| 3 | **Recuperação do proprietário [D]** | E-mail de recuperação obrigatório, a confirmar. "Esqueci o código de acesso" envia para esse e-mail um link de utilização única e com prazo, que só permite definir um código novo. A redefinição invalida o anterior e termina todas as sessões. A resposta não revela se a conta existe. Sem acesso ao e-mail: recuperação assistida pelo suporte, depois de confirmar identidade e vínculo, auditada e fora dos pedidos normais. Substitui a proposta de depender de outro proprietário | C.1.4 (nova), E.1 |
+| 4 | **Registo público [D]** | Qualquer visitante pode criar uma empresa e ficar proprietário, com limite de pedidos por origem. A conta só fica activa depois de confirmar o e-mail (revisão de 08/10/2026) | C.1 |
+| 5 | PIN e desbloqueio local | **Continuam para a Etapa 7.** Quando forem implementados, o desbloqueio local, online e offline, usa o mesmo PIN. Nada disto foi implementado na Etapa 3 | D.13 |
+| 6 | Gestor e contas | Por H-02, as contas são criadas pelo proprietário. A proposta da 0.5 de o gestor convidar e desactivar operadores deixa de se aplicar; voltar a dar-lhe esse papel exige nova decisão | B.1, E.2 |
 
 ## Alterações da versão 0.5
 
@@ -97,7 +112,7 @@ O problema que o MVP resolve: o dono de uma pequena loja precisa de saber, ao fi
 
 | Módulo | Incluído no MVP | Origem |
 |---|---|---|
-| Empresas e utilizadores | Registo do proprietário, criação da empresa, convites, funções proprietário/gestor/operador, **uma filial** (modelo preparado para várias), registo de dispositivos | [D] ([S] dispositivos) |
+| Empresas e utilizadores | Registo do proprietário, criação da empresa, contas de funcionários criadas pelo proprietário (H-02, 0.6), funções proprietário/gestor/operador, **uma filial** (modelo preparado para várias), registo de dispositivos | [D] ([S] dispositivos) |
 | Produtos e stock | Produtos, categorias, unidades, preço de venda, stock mínimo, entradas, saídas, ajustes, contagem física, histórico com data/motivo/responsável | [D] |
 | Compras | Fornecedores, compras, recepção de mercadoria (aumenta o stock uma única vez), pagamentos a fornecedores | [D] |
 | Vendas | Carrinho, descontos autorizados, pagamentos (vários métodos, registo manual), histórico, devoluções e cancelamentos que preservam o original | [D] |
@@ -157,15 +172,15 @@ As funções são **[D]**. A distribuição das permissões é **[S]** e deve se
 | Acção | Proprietário | Gestor | Operador | Offline |
 |---|---|---|---|---|
 | Editar dados da empresa e da filial | ✅ | ❌ | ❌ | ❌ |
-| Convidar/desactivar gestores | ✅ | ❌ | ❌ | ❌ |
-| Convidar/desactivar operadores | ✅ | ✅ | ❌ | ❌ |
+| Criar, desactivar e reactivar contas; definir ou redefinir o código secreto de um funcionário **(0.6, H-02)** | ✅ | ❌ | ❌ | ❌ |
 | Alterar função de um utilizador; transferir propriedade | ✅ | ❌ | ❌ | ❌ |
 | Preparar um dispositivo | ✅ | ✅ | ❌ | ❌ |
 | Revogar um dispositivo; decidir operações em quarentena | ✅ | ✅ | ❌ | ❌ |
 | Definir limites de desconto, política de stock e modo de caixa | ✅ | ❌ | ❌ | ❌ |
 | Configurar métodos de pagamento e contas financeiras | ✅ | ❌ | ❌ | ❌ |
 | Consultar registo de auditoria | ✅ | ✅ (só operacional) | ❌ | ❌ |
-| Alterar o próprio PIN e palavra-passe | ✅ | ✅ | ✅ | ❌ |
+| Alterar o próprio código secreto (PIN: Etapa 7) | ✅ | ✅ | ✅ | ❌ |
+| Registar e confirmar o e-mail de recuperação **(0.6)** | ✅ | — | — | ❌ |
 
 ### B.2 Produtos e stock
 
@@ -250,7 +265,7 @@ As funções são **[D]**. A distribuição das permissões é **[S]** e deve se
 
 **Pré-condição:** internet **[D]**.
 
-1. O proprietário regista-se com nome, e-mail (ou telefone, H-02) e palavra-passe, e confirma a conta.
+1. **(0.6) [D]** O registo é público. O proprietário indica a empresa (nome e **código da empresa**, único, que todos usam para entrar), o seu nome, o nome de utilizador, o **e-mail de recuperação** e o código secreto. A empresa, a filial `F01` e a conta de proprietário são criadas numa só operação, com a conta **pendente**: não há sessão nem acesso até o proprietário confirmar o e-mail pelo link recebido. O link pode ser reenviado (com limites), e o e-mail corrigido com o código secreto. Depois da confirmação, o login é o normal (C.1.4).
 2. **Assistente de configuração**, que se pode retomar mais tarde:
    1. **Empresa:** nome comercial, NUIT (opcional), telefone, endereço; tipo = *Loja*.
    2. **Filial:** "Filial principal", com código curto `F01`.
@@ -270,10 +285,22 @@ As funções são **[D]**. A distribuição das permissões é **[S]** e deve se
 5. Segue **C.1.3** para o utilizador que está a preparar.
 6. A aplicação pede armazenamento persistente ao navegador **[S]** e mostra "Dispositivo `C01` pronto".
 
-**C.1.2 Convidar utilizador**
+**C.1.2 Criar a conta de um funcionário** **(0.6, H-02) [D]**
 
-1. O proprietário ou gestor indica nome, contacto e função (respeitando B.1).
-2. O convidado aceita, cria a palavra-passe e define o PIN.
+1. O proprietário indica o nome, o nome de utilizador (único dentro da empresa; pode repetir-se noutra empresa), a função, as filiais permitidas e o código secreto.
+2. Combina o código com o funcionário pessoalmente. O funcionário entra com o código da empresa, o nome de utilizador e esse código, sem e-mail. Não há código temporário nem mudança obrigatória no primeiro acesso; pode mudá-lo quando quiser.
+3. O código não pode ser consultado depois. Se o funcionário o esquecer, o proprietário define um novo, e as sessões abertas dessa conta terminam.
+4. Os registos identificam a **conta** usada. Como o proprietário conhece o código que definiu, não provam qual pessoa física o introduziu.
+5. O PIN de balcão é da Etapa 7 (D.13).
+
+**C.1.4 Recuperar o acesso do proprietário** **(0.6) [D]**
+
+1. Em "Esqueci o código de acesso", o proprietário indica o código da empresa e o nome de utilizador. A resposta é sempre a mesma, exista ou não a conta.
+2. Se a conta for de um proprietário activo com e-mail confirmado, recebe um link de utilização única e com prazo.
+3. O link só permite definir um código novo; o anterior nunca é mostrado. A redefinição invalida o código anterior e termina todas as sessões da conta.
+4. Há limite de tentativas. Os códigos e os links nunca ficam nos registos de eventos.
+5. Sem acesso ao e-mail: recuperação assistida pelo suporte, depois de confirmar a identidade e o vínculo ao negócio. Fica auditada e acontece fora dos pedidos normais da API.
+6. Os funcionários não usam este fluxo: o proprietário redefine-lhes o código (C.1.2).
 
 **C.1.3 Primeira entrada de um utilizador num dispositivo** (internet obrigatória) **[S]**
 
@@ -445,6 +472,9 @@ Não existe fecho de período no MVP **[D]** (0.3).
 | D.1.3 | Há sempre pelo menos um proprietário activo. | [S] |
 | D.1.4 | Os utilizadores são desactivados, nunca apagados. | [S] |
 | D.1.5 | Desactivar um utilizador termina as suas sessões online e invalida o seu PIN em todos os dispositivos no **próximo contacto** de cada um (C.8.2). Operações feitas antes desse contacto tratam-se por D.13.6. | [S] |
+| D.1.6 | **(0.6)** O login identifica a empresa pelo **código da empresa** (não é segredo e não concede acesso). O nome de utilizador é único dentro da empresa e pode repetir-se noutras. O servidor confirma sempre a conta, o estado e a função. | [D] H-02 |
+| D.1.7 | **(0.6)** Os códigos secretos guardam-se só como resumo de uma função lenta própria para palavras-passe. Nunca podem ser consultados, nem pelo proprietário nem pelo suporte. Redefinir o código de uma conta termina as suas sessões. | [D] H-02 / [S] parâmetros |
+| D.1.8 | **(0.6)** Ninguém altera a função, as filiais ou o estado da própria conta (sem auto-promoção nem auto-desactivação). O código de um proprietário recupera-se pelo e-mail confirmado ou pelo suporte, nunca por outro proprietário. | [S] |
 
 ### D.2 Produtos e stock
 
@@ -1137,7 +1167,7 @@ A aplicação das operações corre com um **papel próprio de sincronização**
 | | Autenticação online | Desbloqueio local (PIN) |
 |---|---|---|
 | Onde se verifica | Servidor | Só no dispositivo |
-| Prova | Identidade perante o servidor (palavra-passe) | Que a pessoa sabe o PIN registado neste dispositivo |
+| Prova | Identidade perante o servidor (código secreto de acesso, H-02) | Que a pessoa sabe o PIN registado neste dispositivo |
 | Resultado | Sessão online; confirmação de membro activo; registo da chave de assinatura; nova versão de permissões; reinício das tentativas de PIN | Acesso à interface com as permissões da versão local; uso da chave de assinatura |
 | Renova a janela offline? | Sim (é um contacto) | **Não** |
 | Actualiza permissões? | Sim | **Não** |
@@ -1224,8 +1254,8 @@ P = proprietário, G = gestor, O = operador. 📴 = disponível offline.
 | # | Página | Acesso | 📴 |
 |---|---|---|---|
 | 1 | Entrar (autenticação online) | Todos | ❌ |
-| 2 | Criar conta / Confirmar conta / Recuperar palavra-passe | Público | ❌ |
-| 3 | Aceitar convite (palavra-passe e PIN) | Convidado | ❌ |
+| 2 | Criar empresa / Confirmar o e-mail de recuperação / Recuperar o acesso (só proprietários) **(0.6)** | Público | ❌ |
+| 3 | ~~Aceitar convite~~ — retirado na 0.6: as contas são criadas pelo proprietário (H-02) | — | — |
 | 4 | Ecrã de bloqueio / trocar utilizador (PIN) | Utilizadores com chave neste dispositivo | 📴 |
 
 ### E.2 Configuração
@@ -1235,9 +1265,9 @@ P = proprietário, G = gestor, O = operador. 📴 = disponível offline.
 | 5 | Assistente de configuração inicial | P | ❌ |
 | 6 | Preparar este dispositivo | P G | ❌ |
 | 7 | Definições: empresa e filial; métodos e contas; regras (descontos, stock, devoluções, modo de caixa, janela offline); comprovativo | P | ❌ |
-| 8 | Utilizadores | P G | ❌ |
+| 8 | Utilizadores (funcionários) — só P desde a 0.6 (H-02) | P | ❌ |
 | 9 | Dispositivos (registos activos, substituídos, suspensos e revogados; último contacto; pendentes declarados; possível perda; revogar) | P G | ❌ |
-| 10 | O meu perfil (palavra-passe, PIN) | Todos | ❌ |
+| 10 | O meu acesso (código secreto; e-mail de recuperação do P; PIN na Etapa 7) | Todos | ❌ |
 
 ### E.3 Operação
 
@@ -1359,10 +1389,10 @@ erDiagram
 |---|---|---|
 | **Empresa** | nome, NUIT, contactos, tipo (loja), moeda, fuso, regras (limites de desconto, política de stock, prazo de devolução, modo de caixa, janela offline) | Raiz do isolamento |
 | **Filial** | empresa, nome, código (`F01`), endereço, estado | |
-| **Utilizador** | nome, contacto, identidade no serviço de autenticação | |
-| **Membro** | utilizador, empresa, função, filiais, verificador do PIN, tentativas, estado, datas | É aqui que vive a função |
+| **Utilizador** (conta) **(0.6)** | empresa, nome de utilizador (único na empresa), nome, função, filiais, estado, datas | Uma conta pertence a uma empresa (H-02). Junta o "utilizador" e o "membro" da 0.5. O verificador do PIN entra na Etapa 7 |
+| **Credencial de acesso** **(0.6)** | resumo do código secreto (função lenta, com sal), parâmetros, versão | Nunca o código |
+| **Contacto de recuperação** **(0.6)** | e-mail confirmado, e-mail pendente | Só proprietários |
 | **Versão de permissões** | empresa, número, data, conteúdo (membros activos, funções, limites, regras) | D.13.3 |
-| **Convite** | empresa, contacto, função, validade, estado | |
 | **Registo de dispositivo** | empresa, filial, nome, **código nunca reutilizado**, resumo da credencial, estado (activo/suspenso/revogado/substituído/desvinculado), registo que substitui, data de revogação/suspensão, última sequência recebida, última versão de permissões confirmada (e sequência) | Unidade de transporte, numeração e isolamento |
 | **Contacto do dispositivo** | registo, hora do servidor, sequência declarada, pendentes declarados (número, valor), desvio do relógio, versão da aplicação | Base de T_antes (D.10.3) e das evidências (D.11.6) |
 | **Chave de assinatura** (hipótese H-23) | membro, registo, chave pública, criada em, estado (activa/encerrada), sequência de encerramento, motivo | D.12.4. Na alternativa D.12.4.5 passa a **sessão local** com os mesmos atributos, sem chave pública |
@@ -1622,7 +1652,7 @@ Quem valida: **Loja** = entrevista à loja piloto · **Proj.** = proprietário d
 | # | Valida | Decisão | Proposta | Porque bloqueia a arquitectura | Consequência da proposta |
 |---|---|---|---|---|---|
 | H-01 | Proj./Téc. | Acesso da API ao Supabase e políticas de acesso | **[D] Aprovada pelo proprietário do projecto em 02/10/2026.** A API acede ao PostgreSQL através de **papéis próprios sem BYPASSRLS**, com **contexto local por transacção**, **RLS forçado** (ENABLE + FORCE) e **referências entre dados limitadas à mesma empresa** (chaves estrangeiras compostas). Desenho: arquitectura, secções 3 e 19 | Define como todas as consultas passam o contexto de empresa e como as políticas são escritas | **Requisitos que acompanham a decisão:** (1) repetir e ampliar os testes de isolamento nas migrações, para todas as tabelas; (2) testar a autorização da API na Etapa 3; (3) não usar a credencial de serviço nos pedidos; (4) preservar a protecção contra contexto residual (marca da transacção); (5) incluir a correcção da transferência de propriedade da função (`GRANT CREATE` temporário antes de `ALTER FUNCTION … OWNER`, seguido de `REVOKE CREATE`). |
-| H-02 | Loja/Proj. | Identidade dos operadores (e-mail, telefone ou conta criada pelo gestor) | Cada operador tem conta própria no serviço de autenticação (e-mail ou telefone); PIN no balcão. | Muda o modelo de utilizador, a autenticação online, a autoria (D.12) e a auditoria | Autoria pessoal. Se os operadores não tiverem e-mail nem telefone próprio, é preciso SMS (custo) ou contas locais geridas pelo gestor, que exigem outro fluxo de autenticação. |
+| H-02 | Loja/Proj. | Identidade dos operadores (e-mail, telefone ou conta criada pelo gestor) | **[D] Aprovada pelo proprietário do projecto em 08/10/2026 (0.6).** Funcionários sem e-mail; entram com código da empresa + nome de utilizador + código secreto de acesso; conta criada pelo proprietário, que lhes dá o código; sem código temporário nem mudança obrigatória no primeiro acesso. O código funciona como palavra-passe (não é identificador público nem PIN curto). Offline e PIN: Etapa 7, com o mesmo PIN para o desbloqueio local online e offline. *(Proposta original: conta própria no serviço de autenticação, com e-mail ou telefone.)* | Muda o modelo de utilizador, a autenticação online, a autoria (D.12) e a auditoria | Autenticação própria da API (sem e-mail para funcionários). Os registos identificam a conta usada, não a pessoa física, porque o proprietário conhece os códigos que define. |
 | H-04 | Proj. | Método de custo | Custo médio ponderado por produto e filial. | Define o modelo de valor do stock, os movimentos e os acertos | Simples. Não serve para lotes (farmácias). Mudar depois obriga a recalcular o histórico. |
 | H-21 | Proj. | Ordem de custeio e acertos | Ordem de aplicação no servidor; custo registado nunca reescrito; acertos explícitos, imputados ou de correcção (D.3). | Define se os custos são imutáveis ou recalculáveis, e o que se guarda por movimento | Determinístico e auditável, com as aproximações A1–A7 assumidas. A alternativa (recalcular pela ordem física) depende dos relógios e reescreve custos. |
 | H-23 | Téc./Proj. | Autoria por assinatura por utilizador e dispositivo | **Hipótese** a validar na Etapa 1 (D.12.4.4), com alternativa definida (D.12.4.5). | Muda o formato das operações, o registo de chaves ou sessões locais e a verificação no servidor | **(0.4)** O modelo admitir as duas opções **não** resolve a decisão. É precisa uma decisão explícita do proprietário do projecto, com os resultados da prova e dos testes nos aparelhos da loja. Proposta de classificação: bloqueia a **Etapa 7**, não a Etapa 2 (arquitectura, secção 18). **Continua em aberto.** |
@@ -1679,7 +1709,7 @@ O roteiro pede "nenhuma decisão crítica em aberto para a primeira loja". Esta 
 
 **Estado actual:**
 
-- **(0.5)** H-01 aprovada em 02/10/2026; 4 decisões de arquitectura em aberto (H-02, H-04, H-21, H-23);
+- **(0.6)** H-01 aprovada em 02/10/2026 e H-02 em 08/10/2026; 3 decisões de arquitectura em aberto (H-04, H-21, H-23);
 - entrevista à loja por fazer;
 - H-03, H-07, H-10, H-13 e H-24 continuam **propostas por validar com a loja**.
 
@@ -1688,7 +1718,7 @@ A Etapa 0 **não está concluída**.
 ### H.6 Perguntas para a entrevista à loja piloto
 
 1. Quantas pessoas vendem ao mesmo tempo? Há uma gaveta por pessoa ou uma partilhada? Como se faz hoje a troca de turno? (H-13)
-2. Os operadores têm e-mail? Telemóvel próprio? (H-02)
+2. ~~Os operadores têm e-mail? (H-02)~~ Decidida em 08/10/2026. Confirmar só se os funcionários conseguem guardar o código sem o partilhar.
 3. Vende a crédito? A quem, com que frequência e com que valores? (H-07)
 4. Compra à caixa e vende à unidade? Em que percentagem dos produtos? (H-10)
 5. Com que frequência e durante quanto tempo falha a internet? Já ficou mais de 3 dias sem rede? (H-03)

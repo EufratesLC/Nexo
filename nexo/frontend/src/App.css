@@ -224,3 +224,24 @@ fieldset.linhas-compra { border: 1px solid var(--linha); border-radius: var(--ra
 .modo-api { max-width: 920px; margin: 0 auto; padding: 16px; display: flex; flex-direction: column; gap: 16px; }
 .menu-separado { margin-top: 12px; padding-top: 8px; border-top: 1px solid var(--linha); }
 .menu-grupo { display: block; font-size: .72rem; text-transform: uppercase; letter-spacing: .06em; color: var(--texto-2); padding: 0 12px 4px; }
+
+/* Aplicação real (Etapa 3) */
+.login-caixa-larga { width: min(860px, 100%); }
+.lista-ligacoes { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; font-size: .92rem; }
+.botao-mostrar { min-height: 40px; padding: 6px 12px; white-space: nowrap; }
+.grupo-entrada input { flex: 1; min-width: 0; }
+.grupo-opcoes { border: 1px solid var(--linha); border-radius: var(--raio); padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; margin: 0; min-width: 0; }
+.grupo-opcoes legend { font-weight: 600; font-size: .88rem; padding: 0 4px; }
+.topo-utilizador { gap: 12px; }
+.topo-utilizador small { color: var(--texto-2); }
+a.botao { display: inline-flex; align-items: center; text-decoration: none; }
+a.botao-primario, a.botao-primario:hover { color: #fff; }
+.lista-estado code, .tabela code { overflow-wrap: anywhere; }
+/* Espaçamento dentro dos cartões dos ecrãs reais (a demonstração mantém o seu). */
+.app-real .cartao > * + *, .login-real .cartao > * + *, .login-real .formulario.cartao > * + * { margin-top: 12px; }
+.app-real .cartao > .cartao-cabecalho + *, .login-real .formulario.cartao > * + * { margin-top: 0; }
+@media (max-width: 760px) {
+  .app-real .grelha-formulario > span:empty, .login-real .grelha-formulario > span:empty { display: none; }
+}
+.lista-passos { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; }
+.titulo-cartao { margin: 0; font-size: 1.05rem; }

@@ -1,16 +1,18 @@
-# Nexo — Ambientes e execução (Etapa 2)
+# Nexo — Ambientes e execução (Etapas 2 e 3)
 
-Versão 0.3 · 6 de Outubro de 2026 (resultados do nexo-dev; credenciais na sessão; Ctrl+C; arranque numa pasta limpa; actualização da PWA)
+Versão 0.4 · 12 de Outubro de 2026 (Etapa 3: migrações 0005–0008, registo com activação pendente, aplicação real com login, e-mail de recuperação, suporte; diagnóstico de ligações, secção 2.6b). Versão 0.3 · 6 de Outubro de 2026 (resultados do nexo-dev; credenciais na sessão; Ctrl+C; pasta limpa; actualização da PWA)
 
 Guia para instalar, configurar e arrancar o Nexo em Windows (PowerShell). Os comandos partem da pasta `nexo`.
 
 | Ambiente | Para quê | Estado |
 |---|---|---|
 | 1. Desenvolvimento local | Frontend, API e protótipo neste computador | Pronto e verificado; também numa pasta limpa (secção 6) |
-| 2. Supabase nexo-dev | Base de dados de desenvolvimento: migrações e testes da base | **Migrações 0001–0004 aplicadas e `test:base` 12/12**, executados pelo proprietário a 06/10/2026 (PostgreSQL 17.11) |
+| 2. Supabase nexo-dev | Base de dados de desenvolvimento: migrações e testes da base | 0001–0004 e `test:base` 12/12 pelo proprietário a 06/10/2026 (PostgreSQL 17.11). **0005–0008 aplicadas e catálogo OK** pelo proprietário a 11–12/10. `test:base` 54/57 (3 falhas de ligação) e repetição da concorrência 10/10; API com `versaoMigracao=0008` (`docs/Nexo_Entrega_Etapa_3.md`, secção 16) |
 | 3. Testes | Testes automáticos | Ver secção 3 |
 | 4. Produção | Futuro | **Não configurado** (secção 4) |
 | 5. HTTPS para telemóvel | Testar PWA e Web Crypto num aparelho | **Pendente** (secção 5) |
+| 8. Aplicação real local | Login, empresa, funcionários, auditoria (Etapa 3) | Verificada localmente com PostgreSQL 17 (secção 8) |
+| 9. E-mail | Confirmação e recuperação do acesso do proprietário | Caixa de saída local verificada (também pelo proprietário contra o nexo-dev); **envio real (SMTP) adiado** por problemas na conta Google (secção 9) |
 
 **Regras que valem em todos os ambientes:**
 
@@ -77,7 +79,7 @@ npm run dev
 **Modos do frontend** (`VITE_NEXO_MODO` em `frontend/.env.local`):
 
 - `demonstracao` (omissão): o protótipo da Etapa 1. Os dados ficam em `localStorage` e nada é escrito na API.
-- `api`: só a infraestrutura real (estado do sistema). Ainda sem login real nem módulos comerciais.
+- `api`: a aplicação real (Etapa 3): login, criação da empresa, funcionários, empresa e filial, o meu acesso, auditoria e estado do sistema. Precisa da API com base de dados (secção 8). Sem módulos comerciais.
 
 ### Encerrar
 
@@ -100,7 +102,9 @@ Confirmado pelo proprietário a 06/10/2026: com Ctrl+C a API registou `"motivo":
 
 **Estado em 06/10/2026:** o proprietário aplicou as migrações 0001–0004 no nexo-dev (PostgreSQL 17.11). A verificação do catálogo deu OK, a palavra-passe de `nexo_api` foi definida e o `test:base` deu 12/12. A API ligou-se pelo Transaction pooler com TLS validado (`docs/Nexo_Entrega_Etapa_2.md`, secção 14).
 
-**Não volte a aplicar nem a apagar nada:** `migrar` numa base já migrada responde "Nada a aplicar". Os passos abaixo servem para quem configura um computador novo contra o mesmo nexo-dev: ligações, certificado e verificação.
+**Etapa 3:** o proprietário aplicou as migrações 0005–0008 no nexo-dev a 11–12/10/2026; a verificação do catálogo deu OK. Não volte a aplicá-las: `migrar` responde "Nada a aplicar".
+
+**Não apague nada:** `migrar` numa base já migrada responde "Nada a aplicar". Os passos abaixo servem para quem configura um computador novo contra o mesmo nexo-dev: ligações, certificado e verificação.
 
 ### 2.1 Obter as ligações e o certificado
 
@@ -187,7 +191,7 @@ Arranque a API (`npm run dev`). No arranque, ela confirma que o papel não ignor
 
 ```powershell
 Invoke-RestMethod http://localhost:3001/api/v1/saude/base
-# esperado: estado = ok; base.papelSeguro = True; base.versaoMigracao = 0004
+# esperado: estado = ok; base.papelSeguro = True; base.versaoMigracao = 0008 (0004 antes da secção 11)
 ```
 
 ### 2.6 Testes da base no nexo-dev
@@ -201,7 +205,9 @@ npm run test:base
 Remove-Item Env:NEXO_TESTE_API_URL, Env:NEXO_TESTE_ADMIN_URL
 ```
 
-Esperado: **12 testes, 0 saltados, 0 falhas**. Resultado do proprietário a 06/10/2026: 12/12, sem saltados (`docs/Nexo_Entrega_Etapa_2.md`, secção 14).
+Esperado, depois das migrações 0005–0008: **57 testes, 0 saltados, 0 falhas**. São 12 de infraestrutura e isolamento, 21 de identidade na base (incluindo a activação pendente), 14 de autorização da API com a base real e 10 de concorrência na activação. Os de concorrência seguram por instantes um bloqueio consultivo na ligação administrativa para forçar as corridas. Resultado do proprietário a 06/10/2026, antes da Etapa 3: 12/12, sem saltados (`docs/Nexo_Entrega_Etapa_2.md`, secção 14). Execução de 11/10/2026 com 57 testes: falhou por ligação (secção 2.6b), sem validar nem invalidar a etapa. Depois de resolvida a ligação, o proprietário obteve **54/57** (3 falhas de ligação: uma `ENOTFOUND` e duas ao obter ligação do pool) e, na repetição de `activacao_concorrencia.test.ts`, **10/10**. Os 57 cenários foram aprovados em duas execuções, não numa só (`docs/Nexo_Entrega_Etapa_3.md`, secção 16).
+
+Os testes da Etapa 3 criam empresas fictícias com códigos `t-…`. No fim apagam-nas pela ligação administrativa, como dono das tabelas, retirando o FORCE e o trigger de imutabilidade da auditoria **só dentro da transacção de limpeza**.
 
 O teste de concorrência corre 90 transacções com concorrência limitada: por omissão, o triplo do pool (`NEXO_TESTE_POOL_MAX`, omissão 4, logo 12 activas). Pode ajustar com `NEXO_TESTE_CONCORRENCIA`, que tem de ser maior do que o pool. Na saída aparecem, sem dados de ligação:
 
@@ -210,6 +216,23 @@ O teste de concorrência corre 90 transacções com concorrência limitada: por 
 - o pool;
 - os tempos por transacção;
 - o estado do pool no fim.
+
+### 2.6b Diagnóstico das ligações (sem segredos) — 12/10/2026
+
+Se o `test:base` ou a API falharem a ligar, **não repita a suite**. Cada execução abre dezenas de ligações. Com uma palavra-passe errada, o pooler do Supabase passa a bloquear o utilizador por excesso de falhas (`ECIRCUITBREAKER … too many authentication failures`), e então até as ligações certas falham durante algum tempo.
+
+Na pasta `backend`, com as variáveis na sessão:
+
+```powershell
+npx tsx src/base/migracoes/ligacoes.ts            # só analisa os URLs; não se liga a nada
+npx tsx src/base/migracoes/ligacoes.ts --testar   # depois: UMA tentativa por ligação
+```
+
+- **Sem `--testar`**, a ferramenta mostra servidor, porta, papel, ref, se há palavra-passe, os problemas de forma e a coerência entre variáveis. Os problemas de forma incluem: `@ # / ?`, espaço ou `%` por codificar na palavra-passe; falta de `.<ref>` no utilizador do pooler; porta e papel errados; `sslmode` no URL. A coerência indica se as variáveis apontam para o mesmo projecto, se as palavras-passe de `nexo_api` em `NEXO_TESTE_API_URL` e `DATABASE_URL` são iguais, e se o certificado é legível. **Nunca mostra palavras-passe nem URLs.**
+- **Com `--testar`**, faz uma tentativa por URL distinto e diz se ligou (com as migrações aplicadas e a última vista pela API) ou a causa da falha: `palavra_passe_recusada`, `bloqueio_temporario_do_pooler`, `utilizador_ou_projecto_desconhecido`, `certificado`, `tempo_esgotado` ou `servidor_inacessivel`.
+- Com `bloqueio_temporario_do_pooler`, espere que o bloqueio passe (o tempo exacto não está confirmado; conte com vários minutos) antes de qualquer nova tentativa, e corrija primeiro a causa.
+
+Desde 12/10 o `test:base` começa por uma **verificação prévia**: uma ligação administrativa e uma `nexo_api`. Se alguma falhar, cada ficheiro falha logo com a causa, sem executar testes, e os ficheiros seguintes não voltam a tentar.
 
 ### 2.7 Se a migração 0001 falhar com "permission denied to alter role"
 
@@ -242,11 +265,12 @@ Os testes criam duas empresas fictícias ("TESTE AUTOMATICO A/B", com identifica
 | `npm run lint` | frontend e backend | — | oxlint |
 | `npm run build` | frontend e backend | — | `tsc` + build |
 | `npm run typecheck` | backend | — | `tsc --noEmit` |
-| `npm test` | backend | — | 66 testes: configuração, HTTP, transacções (pool simulado), migrações (cliente simulado), SCRAM, encerramento, regras no código, assinatura (6), custo efectivo (11) |
-| `npm run test:base` | backend | Base com as migrações (secção 2.6) | 12 testes contra PostgreSQL real; sem variáveis, são saltados |
+| `npm test` | backend | — | 95 testes: os 66 da Etapa 2 e mais 29 da Etapa 3 — diagnóstico de ligações, scrypt e regras do código, tokens, cookie, limitador, configuração, e-mail (ficheiro, memória, SMTP simulado), rotas com serviços simulados, regras no código |
+| `npm run test:base` | backend | Base com as migrações (secção 2.6) | 57 testes contra PostgreSQL real; sem variáveis, são saltados |
 | `npm run teste:fluxo` | frontend | `npm run dev` noutro terminal; a API é opcional | 38 passos no navegador (`frontend/testes/fluxo/README.md`) |
 | `npm run teste:pwa` | frontend | — (constrói e serve sozinho) | 6 passos: manifesto, service worker, cache, abertura sem servidor |
 | `npm run teste:pwa-actualizacao` | frontend | — (constrói duas versões e serve sozinho) | 4 passos: actualização real de A para B no mesmo endereço e perfil |
+| `npm run teste:real -- --base … --api … --correio …` | frontend | API com base e `EMAIL_TRANSPORTE=ficheiro`, web em modo `api` (secção 8) | 18 passos no navegador: criar empresa (pendente), login recusado antes da confirmação, reenvio, confirmar e-mail, funcionário, auditoria, operador, desactivação, recuperação, telemóvel |
 | `scripts\arranque-limpo.ps1` | nexo | — (ou `-ComBase` com as ligações na sessão) | Arranque numa pasta limpa (secção 6) |
 
 ---
@@ -359,3 +383,106 @@ O teste:
 2. serve A em `http://localhost:4176` com um servidor próprio, e abre Edge ou Chrome sem interface num perfil temporário;
 3. publica B **no mesmo endereço**, com o **mesmo perfil**. B instala-se e fica à espera; a página continua em A e mostra "Há uma versão nova…". Recarregar sem aceitar não muda de versão;
 4. carrega em "Actualizar agora": a página passa para B, o aviso desaparece e a cache de A é apagada.
+
+---
+
+## 8. Aplicação real local (Etapa 3)
+
+Precisa de uma base com as migrações 0001–0008: o nexo-dev depois da secção 11, ou um PostgreSQL local de desenvolvimento.
+
+Terminal 1, API (na pasta `backend`; a ligação `nexo_api` está na sessão, secção 2.2):
+
+```powershell
+$env:DATABASE_URL = '<URI do Transaction pooler com nexo_api.<ref>>'
+$env:DB_CA_CERT_FICHEIRO = '../certificado/supabase-ca.crt'
+$env:EMAIL_TRANSPORTE = 'ficheiro'          # caixa de saída local (secção 9)
+npx tsx src/server.ts
+```
+
+Terminal 2, web em modo real (na pasta `frontend`):
+
+```powershell
+$env:VITE_NEXO_MODO = 'api'
+npm run dev
+```
+
+Abrir `http://localhost:5173`. Começa em "Entrar". Em "Criar uma empresa nova", crie uma empresa **de teste**. A conta fica **pendente**: não há sessão até confirmar o e-mail, e o ecrã "Confirme o seu e-mail" permite reenviar o link ou corrigir o e-mail. Os links de confirmação e de recuperação aparecem como ficheiros `.txt` em `backend/correio-dev/` (ignorada pelo Git): abra o link no navegador e depois entre.
+
+- O código da empresa pode ficar lembrado no aparelho (não é segredo). O código secreto nunca fica guardado.
+- O cookie da sessão é HttpOnly: não aparece em `document.cookie`.
+- **Dados de teste no nexo-dev:** as empresas criadas à mão ou pelo `teste:real` ficam na base. A auditoria é imutável e não há comando de apagar. Use nomes e códigos que as identifiquem (`e2e-…`, "TESTE"). Limpá-las exige um procedimento administrativo, ainda por definir.
+
+Teste automático no navegador (com a API e a web acima a correr; a API com `EMAIL_PASTA` conhecida):
+
+```powershell
+cd frontend
+npm run teste:real -- --base http://localhost:5173/ --api http://localhost:3001 --correio ..\backend\correio-dev
+```
+
+No PowerShell, se `--` engolir os argumentos (secção 2.3), use `node testes/real/autenticacao-cdp.mjs --base … --api … --correio …`. O registo público tem um limite de 5 por hora por IP: para repetir o teste muitas vezes, reinicie a API, porque os limites ficam em memória.
+
+## 9. E-mail (recuperação do acesso do proprietário)
+
+| `EMAIL_TRANSPORTE` | Quando | O que faz |
+|---|---|---|
+| `ficheiro` (omissão fora de produção) | Desenvolvimento | Grava cada mensagem em `EMAIL_PASTA` (omissão `correio-dev`). **Nada é enviado.** A pasta contém links secretos: não a partilhe |
+| `smtp` (obrigatório em produção) | nexo-dev com envio real; produção | Envia por um servidor SMTP, com TLS validado: STARTTLS obrigatório na 587, ou TLS implícito na 465 com `SMTP_TLS_IMPLICITO=sim` |
+| `desactivado` | — | Não envia; a recuperação por e-mail fica indisponível |
+
+**Envio real ainda não configurado nem testado.** Para o configurar, escolha um fornecedor de envio com SMTP e um domínio de remetente verificado nesse fornecedor. Depois, só na sessão do terminal ou no gestor de segredos:
+
+```powershell
+$env:EMAIL_TRANSPORTE = 'smtp'
+$env:EMAIL_REMETENTE = 'Nexo <nao-responder@o-seu-dominio>'
+$env:SMTP_SERVIDOR = '<servidor SMTP do fornecedor>'
+$env:SMTP_PORTA = '587'
+$env:SMTP_UTILIZADOR = '<utilizador SMTP>'
+$segura = Read-Host 'Palavra-passe SMTP' -AsSecureString
+$env:SMTP_SENHA = [Runtime.InteropServices.Marshal]::PtrToStringBSTR([Runtime.InteropServices.Marshal]::SecureStringToBSTR($segura))
+$env:NEXO_URL_APLICACAO = 'http://localhost:5173'   # base dos links
+```
+
+Verificação real a fazer (por registar):
+
+1. Criar uma empresa de teste com um e-mail seu.
+2. Receber o e-mail de confirmação e abrir o link.
+3. Pedir "Esqueci o código de acesso", receber o link e definir um código novo.
+4. Receber o aviso "o código de acesso foi alterado".
+5. Ver que o link usado já não funciona.
+
+Os logs da API registam só a finalidade e o domínio do destinatário (`*@dominio`), nunca o endereço completo, os links ou o conteúdo.
+
+## 10. Recuperação assistida pelo suporte
+
+Para um proprietário que perdeu o código **e** o acesso ao e-mail. Antes de correr o comando, o suporte confirma a identidade e o vínculo ao negócio (por exemplo, presencialmente, com documento e prova de que gere a empresa).
+
+O comando corre com a ligação **administrativa** (secção 2.2), fora dos pedidos da API:
+
+```powershell
+cd backend
+$env:NEXO_URL_APLICACAO = 'http://localhost:5173'   # endereço da aplicação que o proprietário vai abrir
+npx tsx src/base/migracoes/cli.ts suporte-recuperacao --empresa <código-da-empresa> --utilizador <nome> --motivo "<como foi confirmada a identidade e o vínculo>" --confirmo <ref>
+```
+
+- Mostra **uma vez** um link de utilização única, válido 24 h (`NEXO_VALIDADE_SUPORTE_HORAS`, de 1 a 48). Entregue-o só pelo canal confirmado, nunca para um e-mail não verificado.
+- Fica registado na auditoria da empresa (origem "suporte", com o motivo).
+- O proprietário define o código novo pelo link. Todas as sessões terminam, e deve registar um e-mail novo.
+- O suporte nunca vê nem define o código.
+
+## 11. Aplicar as migrações da Etapa 3 no nexo-dev
+
+**Estado:** já aplicadas pelo proprietário a 11–12/10/2026 (0005–0008, catálogo OK). Os comandos ficam como referência para outras bases de desenvolvimento.
+
+Com as ligações administrativa e de teste na sessão (secções 2.2 e 2.6), na pasta `backend`:
+
+```powershell
+npx tsx src/base/migracoes/cli.ts estado                      # 0001–0004 aplicadas; 0005, 0006, 0007, 0008 pendentes
+npx tsx src/base/migracoes/cli.ts migrar --confirmo <ref>     # aplica só 0005–0008, cada uma na sua transacção
+npx tsx src/base/migracoes/cli.ts verificar                   # tem de dizer "OK" (regras 1–29)
+npm run test:base                                             # 57 testes, 0 saltados
+```
+
+- Não apaga nada.
+- A 0006 acrescenta o código às empresas que já existam (só dados de teste antigos, `empresa-…`).
+- Depois arranque a API e confirme `versaoMigracao = 0008` em `/api/v1/saude/base`.
+- Se alguma falhar, registe a mensagem completa. O executor desfaz a migração que falhou, e as anteriores ficam aplicadas.

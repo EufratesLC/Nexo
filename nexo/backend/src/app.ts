@@ -5,22 +5,40 @@ import cors from 'cors'
 import express, { type Express } from 'express'
 import type { AcessoBase } from './base/acesso.js'
 import type { Configuracao } from './config/ambiente.js'
+import { criarEnvioEmail, type EnvioEmail } from './email/envio.js'
+import { criarServicoAdministracao, type ServicoAdministracao } from './servicos/administracao.js'
+import { criarServicoIdentidade, type ServicoIdentidade } from './servicos/identidade.js'
 import { ErroApi, naoEncontrado, tratarErros } from './http/erros.js'
 import { identificarPedidos } from './http/pedido.js'
 import { routerProvaAssinatura } from './prova/assinatura.js'
 import type { Logger } from './registo/logger.js'
 import { routerV1 } from './rotas/v1.js'
 
+export interface Servicos {
+  identidade: ServicoIdentidade
+  administracao: ServicoAdministracao
+}
+
 export interface Dependencias {
   config: Configuracao
   logger: Logger
   base: AcessoBase
+  /** Por omissão, o transporte da configuração (EMAIL_TRANSPORTE). Os testes passam um em memória. */
+  email?: EnvioEmail
+  /** Por omissão, os serviços reais sobre a base. Os testes de unidade passam serviços simulados. */
+  servicos?: Servicos
 }
 
-export function criarApp({ config, logger, base }: Dependencias): Express {
+export function criarApp({ config, logger, base, email, servicos }: Dependencias): Express {
+  const envio = email ?? criarEnvioEmail(config.email)
+  const s: Servicos = servicos ?? {
+    identidade: criarServicoIdentidade({ base, config, email: envio, logger }),
+    administracao: criarServicoAdministracao(base),
+  }
   const app = express()
   app.disable('x-powered-by')
-  app.set('trust proxy', false)
+  // Atrás de um proxy (NEXO_PROXIES_CONFIAVEIS), o IP do cliente vem de X-Forwarded-For; sem proxy, nunca.
+  app.set('trust proxy', config.proxiesConfiaveis > 0 ? config.proxiesConfiaveis : false)
 
   app.use(identificarPedidos(logger))
   app.use(
@@ -30,14 +48,16 @@ export function criarApp({ config, logger, base }: Dependencias): Express {
         if (!origem || config.origensCors.includes(origem)) callback(null, true)
         else callback(new ErroApi(403, 'origem_nao_permitida', 'Origem não permitida.'))
       },
-      exposedHeaders: ['X-Nexo-Pedido'],
-      allowedHeaders: ['Content-Type', 'Authorization', 'X-Nexo-Pedido', 'X-Nexo-Empresa', 'Idempotency-Key'],
+      exposedHeaders: ['X-Nexo-Pedido', 'Retry-After'],
+      allowedHeaders: ['Content-Type', 'Authorization', 'X-Nexo-Pedido', 'X-Nexo-Empresa', 'X-Nexo-Filial', 'X-Nexo-Cliente', 'Idempotency-Key'],
+      // O cookie da sessão só acompanha pedidos das origens da lista.
+      credentials: true,
       maxAge: 600,
     }),
   )
   app.use(express.json({ limit: '256kb' }))
 
-  app.use('/api/v1', routerV1(config, base))
+  app.use('/api/v1', routerV1(config, base, s))
 
   // Prova técnica isolada da Etapa 1 (H-23). Só em desenvolvimento. NÃO é autenticação do Nexo.
   if (config.provaAssinaturaActiva) {

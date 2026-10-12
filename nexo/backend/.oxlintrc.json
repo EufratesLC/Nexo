@@ -6,7 +6,7 @@
   },
   "overrides": [
     {
-      "files": ["src/base/migracoes/cli.ts", "src/**/*.test.ts", "testes/**"],
+      "files": ["src/base/migracoes/cli.ts", "src/base/migracoes/ligacoes.ts", "src/**/*.test.ts", "testes/**"],
       "rules": { "no-console": "off" }
     }
   ],

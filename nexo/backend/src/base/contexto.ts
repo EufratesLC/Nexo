@@ -3,9 +3,11 @@
 // - O papel SQL vem SEMPRE desta lista fixa. O cliente nunca indica um papel: o código escolhe
 //   uma chave ("operador", "gestao", "sincronizacao") e o texto SQL sai daqui.
 // - O contexto (empresa, filial, utilizador, função, registo) só pode ser um ContextoVerificado.
-//   Nesta etapa NÃO existe nenhuma função que o crie a partir de um pedido: na Etapa 3, o
-//   middleware de identidade criá-lo-á a partir do JWT verificado e do membro lido na base,
-//   nunca de valores enviados pelo navegador. Os testes usam contexto.testes.ts.
+//   Desde a Etapa 3 há um único caminho a partir de um pedido: contextoDaSessao(), que só aceita
+//   uma SessaoValidada, criada em src/base/identidade.ts com o que a BASE devolveu ao validar o
+//   token da sessão (nexo.validar_sessao). Empresa, utilizador, função e filiais permitidas vêm
+//   daí, nunca de valores enviados pelo navegador; o pedido só pode ESCOLHER uma das filiais
+//   permitidas. Os testes usam contexto.testes.ts. (Regra verificada em testes/unidade/estatico.)
 
 export const PAPEIS_EXECUCAO = {
   operador: 'nexo_operador',
@@ -51,4 +53,46 @@ export function validarContexto(contexto: unknown): ContextoTransaccao {
   }
   if (c.funcao !== null && !FUNCOES.includes(c.funcao as Funcao)) throw new Error('função inválida no contexto')
   return c as ContextoVerificado
+}
+
+export const MARCA_SESSAO: unique symbol = Symbol('nexo.SessaoValidada')
+
+/** Sessão confirmada pela base (nexo.validar_sessao / nexo.iniciar_sessao). */
+export interface SessaoValidada {
+  readonly [MARCA_SESSAO]: true
+  readonly sessaoId: string
+  readonly empresaId: string
+  readonly utilizadorId: string
+  readonly funcao: Funcao
+  readonly nome: string
+  readonly nomeUtilizador: string
+  /** Filiais permitidas (o proprietário tem todas as da empresa). */
+  readonly filiais: readonly string[]
+  readonly expiraEm: Date
+}
+
+export class ErroFilialNaoPermitida extends Error {}
+
+/**
+ * Contexto de um pedido de utilizador. A filial pedida tem de estar entre as permitidas; sem
+ * pedido, usa-se a primeira (no piloto há uma). Nunca aceita empresa, utilizador ou função do pedido.
+ */
+export function contextoDaSessao(sessao: SessaoValidada, filialPedida?: string): ContextoVerificado {
+  if (!sessao || sessao[MARCA_SESSAO] !== true) throw new Error('sessão não validada pela base')
+  if (filialPedida !== undefined && !sessao.filiais.includes(filialPedida)) throw new ErroFilialNaoPermitida('filial não permitida')
+  const c: ContextoVerificado = {
+    [MARCA_CONTEXTO]: true,
+    empresaId: sessao.empresaId,
+    filialId: filialPedida ?? sessao.filiais[0] ?? null,
+    utilizadorId: sessao.utilizadorId,
+    funcao: sessao.funcao,
+    registoId: null,
+  }
+  validarContexto(c)
+  return c
+}
+
+/** Papel de execução da função (arquitectura 2.1): operador → nexo_operador; os outros → nexo_gestao. */
+export function papelDaFuncao(funcao: Funcao): PapelExecucao {
+  return funcao === 'operador' ? 'operador' : 'gestao'
 }

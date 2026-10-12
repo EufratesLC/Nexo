@@ -10,7 +10,7 @@
     "lint": "oxlint",
     "typecheck": "tsc --noEmit",
     "test": "tsx --test testes/unidade/*.test.ts src/prova/assinatura.test.ts testes/custo/custo_efectivo.test.mjs",
-    "test:base": "tsx --test testes/base/*.test.ts",
+    "test:base": "tsx --test --test-concurrency=1 testes/base/*.test.ts",
     "db:estado": "tsx src/base/migracoes/cli.ts estado",
     "db:migrar": "tsx src/base/migracoes/cli.ts migrar",
     "db:verificar": "tsx src/base/migracoes/cli.ts verificar",
@@ -20,6 +20,7 @@
     "cors": "^2.8.6",
     "dotenv": "^18.0.4",
     "express": "^5.2.1",
+    "nodemailer": "^10.0.16",
     "pg": "^8.23.1",
     "pino": "^10.4.0",
     "zod": "^4.6.5"

@@ -20,12 +20,16 @@ test('valores por omissão em desenvolvimento, sem base de dados', () => {
   assert.equal(c.provaAssinaturaActiva, true)
 })
 
+// Mínimo de produção desde a Etapa 3: endereço https e envio de e-mail real (SMTP).
+const PRODUCAO_EMAIL = { NEXO_URL_APLICACAO: 'https://app.exemplo.co.mz', SMTP_SERVIDOR: 'smtp.exemplo.co.mz', EMAIL_REMETENTE: 'Nexo <nao-responder@exemplo.co.mz>' }
+
 test('a prova de assinatura só fica activa em desenvolvimento', () => {
   assert.equal(lerConfiguracao({ NEXO_AMBIENTE: 'teste' }).provaAssinaturaActiva, false)
   const prod = lerConfiguracao({
     NEXO_AMBIENTE: 'producao',
     DATABASE_URL: 'postgresql://nexo_api.ref:x@aws-0-eu-west-1.pooler.supabase.com:6543/postgres',
     DB_CA_CERT_FICHEIRO: ca,
+    ...PRODUCAO_EMAIL,
   })
   assert.equal(prod.provaAssinaturaActiva, false)
 })

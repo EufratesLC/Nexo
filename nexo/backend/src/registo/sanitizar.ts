@@ -8,10 +8,13 @@ const PADROES: [RegExp, string][] = [
   [/\b(Bearer|Nexo-Dispositivo)\s+[A-Za-z0-9._~+/=-]+/gi, '$1 <omitido>'],
   // JWT soltos (três partes base64url)
   [/\beyJ[A-Za-z0-9_-]{5,}\.[A-Za-z0-9_-]{5,}\.[A-Za-z0-9_-]{5,}\b/g, '<jwt omitido>'],
-  // Credenciais de dispositivo (prefixo nd_)
-  [/\bnd_[A-Za-z0-9_-]{8,}\b/g, '<credencial omitida>'],
-  // password=..., senha: ..., secret=..., token=...
-  [/\b(password|passwd|pwd|senha|secret|segredo|token|apikey|api_key)(\s*[=:]\s*)("[^"]*"|'[^']*'|[^\s,;&]+)/gi, '$1$2<omitido>'],
+  // Credenciais de dispositivo (prefixo nd_), tokens de sessão (ns_) e de links de e-mail (ne_)
+  [/\bnd_[A-Za-z0-9_-]{8,}/g, '<credencial omitida>'],
+  [/\bn[se]_[A-Za-z0-9_-]{8,}/g, '<token omitido>'],
+  // Cookie da sessão
+  [/\b((?:__Host-)?nexo_sessao)=[^;\s]+/g, '$1=<omitido>'],
+  // password=..., senha: ..., secret=..., token=..., codigoSecreto: "..."
+  [/\b(password|passwd|pwd|senha|secret|segredo|token|apikey|api_key|codigoSecreto|codigoActual|codigoNovo|codigo_secreto)("?\s*[=:]\s*)("[^"]*"|'[^']*'|[^\s,;&]+)/gi, '$1$2<omitido>'],
 ]
 
 export function sanitizar(texto: string): string {
@@ -32,4 +35,10 @@ export const CAMINHOS_REDIGIDOS = [
   '*.credencial',
   '*.connectionString',
   '*.ligacao',
+  '*.codigoSecreto',
+  '*.codigoActual',
+  '*.codigoNovo',
+  '*.sal',
+  '*.resumo',
+  'req.body',
 ]

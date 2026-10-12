@@ -10,7 +10,8 @@
     "preview": "vite preview",
     "teste:fluxo": "node testes/fluxo/fluxo-cdp.mjs",
     "teste:pwa": "npm run build && node testes/pwa/pwa-cdp.mjs",
-    "teste:pwa-actualizacao": "node testes/pwa/actualizacao-cdp.mjs"
+    "teste:pwa-actualizacao": "node testes/pwa/actualizacao-cdp.mjs",
+    "teste:real": "node testes/real/autenticacao-cdp.mjs"
   },
   "dependencies": {
     "react": "^19.2.8",

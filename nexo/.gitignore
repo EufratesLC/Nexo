@@ -19,3 +19,6 @@ certificado/
 *.key
 *.crt
 *.p12
+
+# Caixa de saída de e-mail de desenvolvimento (EMAIL_TRANSPORTE=ficheiro): contém links secretos.
+correio-dev/

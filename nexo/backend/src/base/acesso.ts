@@ -27,11 +27,29 @@ export interface EstadoBase {
   motivo?: 'nao_configurada' | 'sem_ligacao' | 'papel_inseguro' | 'migracoes_em_falta'
 }
 
+// Funções de identidade (0007) que a API chama SEM contexto, como nexo_api e sem SET ROLE. Lista
+// fechada: o texto SQL sai daqui, o pedido só fornece valores (sempre como parâmetros).
+const SQL_IDENTIDADE = {
+  parametros_acesso: 'SELECT parametros, sal FROM nexo.parametros_acesso($1, $2)',
+  iniciar_sessao: 'SELECT * FROM nexo.iniciar_sessao($1, $2, $3, $4, $5::interval, $6::interval)',
+  validar_sessao: 'SELECT * FROM nexo.validar_sessao($1)',
+  terminar_sessao: 'SELECT nexo.terminar_sessao($1) AS terminada',
+  registar_empresa: 'SELECT * FROM nexo.registar_empresa($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12::interval)',
+  confirmar_email: 'SELECT nexo.confirmar_email($1) AS resultado',
+  pedir_recuperacao: 'SELECT email FROM nexo.pedir_recuperacao($1, $2, $3, $4::interval)',
+  concluir_recuperacao: 'SELECT * FROM nexo.concluir_recuperacao($1, $2, $3, $4)',
+  reenviar_activacao: 'SELECT email FROM nexo.reenviar_activacao($1, $2, $3, $4::interval)',
+  corrigir_email_activacao: 'SELECT email FROM nexo.corrigir_email_activacao($1, $2, $3, $4, $5, $6::interval)',
+} as const
+export type FuncaoIdentidade = keyof typeof SQL_IDENTIDADE
+
 export interface AcessoBase {
   executarTransaccao<T>(
     opcoes: { papel: PapelExecucao; contexto: ContextoTransaccao },
     trabalho: (cliente: ClienteTransaccao) => Promise<T>,
   ): Promise<T>
+  /** Uma função de identidade, numa única instrução (transacção implícita), como nexo_api. */
+  chamarIdentidade<R extends pg.QueryResultRow = pg.QueryResultRow>(funcao: FuncaoIdentidade, valores: unknown[]): Promise<R[]>
   diagnosticar(): Promise<EstadoBase>
   encerrar(): Promise<void>
 }
@@ -184,8 +202,27 @@ export function criarAcessoBase(
     }
   }
 
+  async function chamarIdentidade<R extends pg.QueryResultRow>(funcao: FuncaoIdentidade, valores: unknown[]): Promise<R[]> {
+    if (!Object.hasOwn(SQL_IDENTIDADE, funcao)) throw new ErroBase('função de identidade desconhecida')
+    if (!pool) throw new ErroBaseIndisponivel('base de dados não configurada')
+    let cliente: ClienteMinimo
+    try {
+      cliente = await pool.connect()
+    } catch (erro) {
+      logger.warn({ err: erro }, 'sem ligação à base dentro do tempo limite')
+      throw new ErroBaseIndisponivel('sem ligação à base dentro do tempo limite')
+    }
+    try {
+      const r = await cliente.query({ text: SQL_IDENTIDADE[funcao], values: valores, queryMode: 'extended' } as pg.QueryConfig)
+      return r.rows as R[]
+    } finally {
+      cliente.release()
+    }
+  }
+
   return {
     executarTransaccao,
+    chamarIdentidade,
     diagnosticar,
     encerrar: async () => {
       await pool?.end()

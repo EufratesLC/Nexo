@@ -1,11 +1,18 @@
-// Rotas da versão 1 da API (/api/v1). Na Etapa 2 só existem as verificações de saúde.
+// Rotas da versão 1 da API (/api/v1): saúde (Etapa 2), autenticação e administração (Etapa 3).
 
 import { Router } from 'express'
 import type { AcessoBase } from '../base/acesso.js'
 import type { Configuracao } from '../config/ambiente.js'
+import type { ServicoAdministracao } from '../servicos/administracao.js'
+import type { ServicoIdentidade } from '../servicos/identidade.js'
+import { exigirClienteConfiavel } from '../autenticacao/middleware.js'
+import { routerAdministracao } from './administracao.js'
+import { routerAutenticacao } from './autenticacao.js'
 
-export function routerV1(config: Configuracao, base: AcessoBase): Router {
+export function routerV1(config: Configuracao, base: AcessoBase, servicos: { identidade: ServicoIdentidade; administracao: ServicoAdministracao }): Router {
   const router = Router()
+  // Pedidos que alteram dados: só da aplicação (cabeçalho X-Nexo-Cliente; protecção contra CSRF).
+  router.use(exigirClienteConfiavel)
 
   // Saúde do processo: não toca na base. Serve para saber se a API está a responder.
   router.get('/saude', (_req, res) => {
@@ -27,6 +34,9 @@ export function routerV1(config: Configuracao, base: AcessoBase): Router {
       },
     })
   })
+
+  router.use('/autenticacao', routerAutenticacao({ config, ...servicos }))
+  router.use(routerAdministracao({ config, ...servicos }))
 
   return router
 }
